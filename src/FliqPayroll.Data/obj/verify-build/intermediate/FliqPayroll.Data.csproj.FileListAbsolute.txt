@@ -1,0 +1,17 @@
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.csproj.AssemblyReference.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.AssemblyInfoInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.AssemblyInfo.cs
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.csproj.CoreCompileInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayr.B83D22D1.Up2Date
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\refint\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Data.deps.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\FliqPayroll.Data.genruntimeconfig.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Data.runtimeconfig.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\intermediate\ref\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Data.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\verify-build\FliqPayroll.Core.pdb

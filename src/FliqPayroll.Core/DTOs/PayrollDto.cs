@@ -1,0 +1,60 @@
+using FliqPayroll.Core.Enums;
+
+namespace FliqPayroll.Core.DTOs;
+
+public class PayrollDto
+{
+    public int EmployeeId { get; set; }
+    public string EmployeeName { get; set; } = string.Empty;
+    public string EmployeeCode { get; set; } = string.Empty;
+    public string? Position { get; set; }
+    public SalaryType SalaryType { get; set; }
+    public decimal BasicSalary { get; set; }
+    public decimal BiMonthlySalary { get; set; }
+    public decimal DailyRate { get; set; }
+    public decimal HourlyRate { get; set; }
+    public decimal WorkingDays { get; set; }
+    public decimal AbsentDays { get; set; }
+    public decimal BasicPayAmount { get; set; }
+    public decimal OvertimePay { get; set; }
+    public decimal HolidayPay { get; set; }
+    public decimal RegularHolidayPay { get; set; }
+    public decimal SpecialNonWorkingPay { get; set; }
+    public decimal LeaveWithPay { get; set; }
+    public decimal Incentives { get; set; }
+    public decimal Allowances { get; set; }
+    public decimal Bonuses { get; set; }
+    public decimal AdjustmentsEarnings { get; set; }
+    public decimal GrossPay { get; set; }
+    public decimal AbsenceDeduction { get; set; }
+    public decimal LateDeduction { get; set; }
+    public decimal UndertimeDeduction { get; set; }
+    public decimal CashAdvance { get; set; }
+    public decimal SssDeduction { get; set; }
+    public decimal PhilHealthDeduction { get; set; }
+    public decimal PagIbigDeduction { get; set; }
+    public decimal SssLoanDeduction { get; set; }
+    public decimal PagIbigLoanDeduction { get; set; }
+    public decimal WithholdingTax { get; set; }
+    public decimal OtherDeductions { get; set; }
+    public decimal TotalDeductions { get; set; }
+    public decimal NetPay { get; set; }
+    public PayrollStatus Status { get; set; }
+}
+
+public class PayrollPeriodDto
+{
+    public string Name { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public int CutoffDay { get; set; }
+    public PayrollPeriodStatus Status { get; set; }
+}
+
+public class PayrollByDateRangeDto
+{
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
+    public string PeriodName { get; set; } = string.Empty;
+    public IReadOnlyList<PayrollDto> Records { get; set; } = [];
+}

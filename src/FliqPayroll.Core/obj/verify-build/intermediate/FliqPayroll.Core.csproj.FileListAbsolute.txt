@@ -1,0 +1,11 @@
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.AssemblyInfoInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.AssemblyInfo.cs
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.csproj.CoreCompileInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\refint\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\FliqPayroll.Core.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\FliqPayroll.Core.deps.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\intermediate\ref\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Core\obj\verify-build\FliqPayroll.Core.pdb

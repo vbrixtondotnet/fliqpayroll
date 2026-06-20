@@ -1,0 +1,69 @@
+@{
+    ViewData["Title"] = "Attendance Sheet";
+}
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Attendance Sheet</h1>
+        <p class="text-muted mb-0">Upload biometrics CSV and review daily time-in, time-out, and overtime.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <label for="attendance-date" class="form-label mb-0">Date</label>
+        <input type="date" id="attendance-date" class="form-control" style="width: auto;" />
+        <button type="button" id="attendance-load-btn" class="btn btn-primary">Load</button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Upload Biometrics CSV</h2>
+        <p class="text-muted small mb-3">
+            Expected columns: (unused), Employee Code, Date, Time, (ignored), Attendance Code (0=IN, 1=OUT, 4=OT IN, 5=OT OUT). Employee Code must match <code>Employees.EmployeeCode</code> (not the numeric Id).
+        </p>
+        <form id="attendance-upload-form" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label for="attendance-csv-file" class="form-label">CSV File</label>
+                <input type="file" id="attendance-csv-file" class="form-control" accept=".csv,text/csv" required />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" id="attendance-upload-btn" class="btn btn-success w-100">Upload CSV</button>
+            </div>
+        </form>
+        <div id="attendance-upload-result" class="mt-3 d-none"></div>
+    </div>
+</div>
+
+<div id="attendance-alert" class="alert alert-danger d-none" role="alert"></div>
+<div id="attendance-success" class="alert alert-success d-none" role="alert"></div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle" id="attendance-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Employee</th>
+                        <th style="width: 110px;">Time In</th>
+                        <th style="width: 110px;">Time Out</th>
+                        <th style="width: 80px;">Late</th>
+                        <th style="width: 110px;">OT In</th>
+                        <th style="width: 110px;">OT Out</th>
+                        <th style="width: 90px;">OT Valid</th>
+                        <th>Notes</th>
+                        <th style="width: 90px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-body">
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">Loading attendance...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/attendance.js" asp-append-version="true"></script>
+}

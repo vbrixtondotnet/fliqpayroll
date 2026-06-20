@@ -1,0 +1,17 @@
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Data.deps.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Data.runtimeconfig.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Data.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\bin\Release\net10.0\FliqPayroll.Core.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.csproj.AssemblyReference.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.AssemblyInfoInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.AssemblyInfo.cs
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.csproj.CoreCompileInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayr.B83D22D1.Up2Date
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\refint\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\FliqPayroll.Data.genruntimeconfig.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Data\obj\Release\net10.0\ref\FliqPayroll.Data.dll

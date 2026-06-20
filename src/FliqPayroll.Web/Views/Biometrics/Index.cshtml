@@ -1,0 +1,102 @@
+@{
+    ViewData["Title"] = "Biometrics";
+}
+
+<div class="page-header mb-4">
+    <h1 class="h3 mb-1">Biometrics</h1>
+    <p class="text-muted mb-0">Upload biometric attendance CSV files and view period summaries.</p>
+</div>
+
+<div id="biometrics-alert" class="alert alert-danger d-none" role="alert"></div>
+<div id="biometrics-success" class="alert alert-success d-none" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Upload Biometric File</h2>
+                <p class="text-muted small">CSV columns: (unused), Employee Code, Date, Time, (ignored), Attendance Code. Employee Code must match <code>Employees.EmployeeCode</code>.</p>
+                <form id="biometrics-upload-form">
+                    <div class="mb-3">
+                        <label for="biometrics-file" class="form-label">CSV File</label>
+                        <input type="file" class="form-control" id="biometrics-file" accept=".csv,text/csv" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="biometrics-upload-btn">Upload & Process</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+                    <h2 class="h5 mb-0">Attendance Summary</h2>
+                    <div class="d-flex gap-2 align-items-end">
+                        <div>
+                            <label for="biometrics-summary-start" class="form-label mb-1 small">From</label>
+                            <input type="date" class="form-control form-control-sm" id="biometrics-summary-start" />
+                        </div>
+                        <div>
+                            <label for="biometrics-summary-end" class="form-label mb-1 small">To</label>
+                            <input type="date" class="form-control form-control-sm" id="biometrics-summary-end" />
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="biometrics-summary-btn">Load</button>
+                    </div>
+                </div>
+
+                <div class="row g-3" id="biometrics-summary-cards">
+                    <div class="col-md-4">
+                        <div class="summary-card card h-100">
+                            <div class="card-body">
+                                <div class="summary-label">Employees</div>
+                                <div class="summary-value" id="bio-total-employees">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card card h-100">
+                            <div class="card-body">
+                                <div class="summary-label">Valid Days</div>
+                                <div class="summary-value text-success" id="bio-valid-days">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card card h-100">
+                            <div class="card-body">
+                                <div class="summary-label">Late Days</div>
+                                <div class="summary-value text-warning" id="bio-late-days">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="summary-card card h-100">
+                            <div class="card-body">
+                                <div class="summary-label">Incomplete Days</div>
+                                <div class="summary-value text-danger" id="bio-incomplete-days">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="summary-card card h-100">
+                            <div class="card-body">
+                                <div class="summary-label">Total Overtime (hours)</div>
+                                <div class="summary-value" id="bio-overtime-hours">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="biometrics-upload-result" class="mt-3 d-none">
+                    <h3 class="h6">Last Upload Result</h3>
+                    <ul class="list-unstyled mb-0 small" id="biometrics-upload-details"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/biometrics.js" asp-append-version="true"></script>
+}

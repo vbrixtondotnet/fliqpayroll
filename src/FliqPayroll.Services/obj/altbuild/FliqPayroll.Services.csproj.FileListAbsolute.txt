@@ -1,0 +1,15 @@
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.csproj.AssemblyReference.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.AssemblyInfoInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.AssemblyInfo.cs
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.csproj.CoreCompileInputs.cache
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayr.52100D0F.Up2Date
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\refint\FliqPayroll.Services.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Services.deps.json
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\ref\FliqPayroll.Services.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Core.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Data.dll
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Core.pdb
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Services\obj\altbuild\FliqPayroll.Data.pdb

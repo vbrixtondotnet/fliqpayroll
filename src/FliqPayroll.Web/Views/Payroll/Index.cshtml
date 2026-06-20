@@ -1,0 +1,137 @@
+@{
+
+    ViewData["Title"] = "Payroll";
+
+}
+
+
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+
+    <div>
+
+        <h1 class="h3 mb-1">Payroll</h1>
+
+        <p class="text-muted mb-0">Calculate payroll on the fly from attendance for the selected date range.</p>
+
+    </div>
+
+</div>
+
+
+
+<div class="card mb-3">
+
+    <div class="card-body">
+
+        <p class="fw-bold mb-3">Select Payroll Period</p>
+
+        <div class="d-flex flex-wrap align-items-center gap-4">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <label for="payroll-from-date" class="form-label mb-0 fw-semibold">From</label>
+
+                <input type="date" id="payroll-from-date" class="form-control" style="width: auto;" />
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+                <label for="payroll-to-date" class="form-label mb-0 fw-semibold">To</label>
+
+                <input type="date" id="payroll-to-date" class="form-control" style="width: auto;" />
+
+            </div>
+
+            <button type="button" id="payroll-generate-btn" class="btn btn-primary">Generate</button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div id="payroll-period-info" class="alert alert-light border mb-3 d-none"></div>
+
+<div id="payroll-loading" class="text-center py-3 mb-3 d-none" aria-live="polite">
+
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+
+        <span class="visually-hidden">Loading...</span>
+
+    </div>
+
+    <span class="ms-2 text-muted">Calculating payroll...</span>
+
+</div>
+
+<div id="payroll-alert" class="alert alert-danger d-none" role="alert"></div>
+
+
+
+<div class="card">
+
+    <div class="card-body p-0">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover mb-0 align-middle payroll-table" id="payroll-table">
+
+                <thead class="table-light">
+
+                    <tr>
+
+                        <th>Code</th>
+
+                        <th>Employee</th>
+
+                        <th>Basic</th>
+
+                        <th>Working</th>
+
+                        <th>Absent</th>
+
+                        <th>OT Pay</th>
+
+                        <th>Holiday Pay</th>
+
+                        <th>Gross</th>
+
+                        <th>Deductions</th>
+
+                        <th>Net Pay</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="payroll-body">
+
+                    <tr>
+
+                        <td colspan="10" class="text-center text-muted py-4">Select a payroll period and click Generate.</td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+@section Scripts {
+
+    <script src="~/js/payroll.js" asp-append-version="true"></script>
+
+}
+
+

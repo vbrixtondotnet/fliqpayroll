@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FliqPayroll.Core/FliqPayroll.Core.csproj" />
+    <Project Path="src/FliqPayroll.Data/FliqPayroll.Data.csproj" />
+    <Project Path="src/FliqPayroll.Services/FliqPayroll.Services.csproj" />
+    <Project Path="src/FliqPayroll.Web/FliqPayroll.Web.csproj" />
+  </Folder>
+</Solution>

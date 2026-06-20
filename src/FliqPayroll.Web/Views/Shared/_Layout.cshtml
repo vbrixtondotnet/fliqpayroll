@@ -1,0 +1,192 @@
+﻿@{
+
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+
+}
+
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - FliqPayroll</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <link rel="stylesheet" href="~/FliqPayroll.Web.styles.css" asp-append-version="true" />
+
+</head>
+
+<body>
+
+    <header>
+
+        <nav class="navbar navbar-expand-lg app-navbar shadow-sm">
+
+            <div class="container-fluid">
+
+                <a class="navbar-brand" asp-controller="Dashboard" asp-action="Index">
+
+                    <img src="~/images/flig-logo-h-white.png" alt="FliqPayroll" class="navbar-brand-logo" asp-append-version="true" />
+
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+
+                    <span class="navbar-toggler-icon"></span>
+
+                </button>
+
+                <div class="collapse navbar-collapse" id="mainNav">
+
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Dashboard" ? "active" : "")"
+
+                               asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+
+                        </li>
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Attendance" ? "active" : "")"
+
+                               asp-controller="Attendance" asp-action="Index">Attendance</a>
+
+                        </li>
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Employees" ? "active" : "")"
+
+                               asp-controller="Employees" asp-action="Index">Employees</a>
+
+                        </li>
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Payroll" ? "active" : "")"
+
+                               asp-controller="Payroll" asp-action="Index">Payroll</a>
+
+                        </li>
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Payslips" ? "active" : "")"
+
+                               asp-controller="Payslips" asp-action="Index">Payslips</a>
+
+                        </li>
+
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "HolidayCalendar" ? "active" : "")"
+
+                               asp-controller="HolidayCalendar" asp-action="Index">Holiday Calendar</a>
+
+                        </li>
+
+                    </ul>
+
+                    <ul class="navbar-nav mb-2 mb-lg-0">
+
+                        @if (User.Identity?.IsAuthenticated == true)
+
+                        {
+
+                            <li class="nav-item">
+
+                                <span class="navbar-text me-3">@User.Identity.Name</span>
+
+                            </li>
+
+                            <li class="nav-item">
+
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+
+                                    @Html.AntiForgeryToken()
+
+                                    <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+
+                                </form>
+
+                            </li>
+
+                        }
+
+                        else
+
+                        {
+
+                            <li class="nav-item">
+
+                                <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
+
+                            </li>
+
+                        }
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </nav>
+
+    </header>
+
+
+
+    <div class="container-fluid app-content">
+
+        <main role="main">
+
+            @RenderBody()
+
+        </main>
+
+    </div>
+
+
+
+    <footer class="app-footer">
+
+        <div class="container-fluid">
+
+            &copy; @PhilippineTime.Now.Year - FliqPayroll
+
+        </div>
+
+    </footer>
+
+
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/ph-time.js" asp-append-version="true"></script>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+
+</html>
+
