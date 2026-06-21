@@ -802,5 +802,21 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.ReportsApiController",
+    "Method": "GetAllPayslipsPdf",
+    "RelativePath": "api/reports/payslip/pdf/all",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "payrollPeriodId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
   }
 ]

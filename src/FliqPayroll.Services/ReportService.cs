@@ -262,6 +262,80 @@ public class ReportService : IReportService
 
     }
 
+    public async Task<IReadOnlyList<PayslipDto>> GetAllPayslipsByPeriodIdAsync(
+
+        int payrollPeriodId,
+
+        CancellationToken cancellationToken = default)
+
+    {
+
+        var saved = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken)
+
+            ?? throw new ArgumentException("Saved payroll period not found.");
+
+
+
+        var employees = await _employeeRepository.GetAllAsync(cancellationToken: cancellationToken);
+
+        var employeeMap = employees.ToDictionary(e => e.Id);
+
+
+
+        var period = new PayrollPeriodDto
+
+        {
+
+            Name = saved.PeriodName,
+
+            StartDate = saved.FromDate,
+
+            EndDate = saved.ToDate,
+
+            CutoffDay = saved.ToDate.Day
+
+        };
+
+
+
+        var payslips = new List<PayslipDto>();
+
+
+
+        foreach (var record in saved.Records.OrderBy(r => r.EmployeeName))
+
+        {
+
+            if (!employeeMap.TryGetValue(record.EmployeeId, out var employee))
+
+            {
+
+                continue;
+
+            }
+
+
+
+            payslips.Add(new PayslipDto
+
+            {
+
+                Payroll = record,
+
+                Period = period,
+
+                Employee = employee
+
+            });
+
+        }
+
+
+
+        return payslips;
+
+    }
+
 
 
     public async Task<EmployeePayrollHistoryDto?> GetEmployeeHistoryAsync(

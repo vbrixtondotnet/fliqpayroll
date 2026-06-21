@@ -210,6 +210,30 @@ public class ReportsApiController : ControllerBase
 
     }
 
+    [HttpGet("payslip/pdf/all")]
+    public async Task<IActionResult> GetAllPayslipsPdf(
+        [FromQuery] int payrollPeriodId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var payslips = await _reportService.GetAllPayslipsByPeriodIdAsync(payrollPeriodId, cancellationToken);
+            if (payslips.Count == 0)
+            {
+                return NotFound("No payslips found for this payroll period.");
+            }
+
+            var pdf = _payslipPdfService.GenerateAll(payslips);
+            var periodName = payslips[0].Period.Name.Replace(" ", "_");
+            var fileName = $"Payslips_{periodName}.pdf";
+            return File(pdf, "application/pdf", fileName);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
 
 
     [HttpGet("employee-history/{employeeId:int}")]

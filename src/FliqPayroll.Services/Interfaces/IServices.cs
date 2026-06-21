@@ -96,6 +96,8 @@ public interface IReportService
 
     Task<PayslipDto?> GetPayslipByPeriodIdAsync(int employeeId, int payrollPeriodId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<PayslipDto>> GetAllPayslipsByPeriodIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
+
     Task<EmployeePayrollHistoryDto?> GetEmployeeHistoryAsync(int employeeId, CancellationToken cancellationToken = default);
 
     Task<byte[]> ExportPayrollSummaryCsvAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
