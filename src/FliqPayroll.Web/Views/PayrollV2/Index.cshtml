@@ -1,0 +1,116 @@
+@model PayrollV2PageViewModel
+@{
+    ViewData["Title"] = "Payroll v2";
+}
+<div class="page-header mb-4">
+    <h1 class="h3 mb-0">Payroll v2</h1>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="fw-bold mb-3">Select Payroll Period</p>
+        <div class="d-flex flex-wrap align-items-center gap-4">
+            <div class="d-flex align-items-center gap-2">
+                <label for="payroll-v2-from-date" class="form-label mb-0 fw-semibold">From</label>
+                <input type="date" id="payroll-v2-from-date" class="form-control" style="width: auto;" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label for="payroll-v2-to-date" class="form-label mb-0 fw-semibold">To</label>
+                <input type="date" id="payroll-v2-to-date" class="form-control" style="width: auto;" />
+            </div>
+            <button type="button" id="payroll-v2-generate-btn" class="btn btn-primary">Generate Payroll</button>
+        </div>
+    </div>
+</div>
+
+<div id="payroll-v2-period-info" class="alert alert-light border mb-3 d-none"></div>
+<div id="payroll-v2-alert" class="alert alert-danger d-none" role="alert"></div>
+<div id="payroll-v2-loading" class="text-center py-3 mb-3 d-none" aria-live="polite">
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <span class="ms-2 text-muted">Calculating payroll...</span>
+</div>
+<div class="card payroll-v2-card">
+    <div class="card-body p-0">
+        <div class="payroll-v2-table-wrap">
+            <table class="table table-sm payroll-v2-table mb-0" id="payroll-v2-table">
+                <colgroup>
+                    <col class="payroll-v2-col-sticky-1" />
+                    <col class="payroll-v2-col-sticky-2" />
+                    <col class="payroll-v2-col-sticky-3" />
+                    <col class="payroll-v2-col-sticky-4" />
+                    <col class="payroll-v2-col-sticky-5" />
+                    <col class="payroll-v2-col-sticky-6" />
+                </colgroup>
+                <thead>
+                    <tr class="payroll-v2-header-row-1">
+                        <th colspan="6" class="text-center payroll-v2-period payroll-v2-sticky-period" id="payroll-v2-period-label"></th>
+                        <th colspan="25"></th>
+                        <th colspan="3" class="text-center payroll-v2-group-loan">SSS &amp; PAG-IBIG LOAN</th>
+                        <th colspan="2" class="text-center payroll-v2-group-net">NET SALARY<br />(BI-MONTHLY)</th>
+                    </tr>
+                    <tr class="payroll-v2-header-row-2">
+                        <th rowspan="2" class="payroll-v2-sticky-col payroll-v2-sticky-col-1">Full Name</th>
+                        <th rowspan="2" class="payroll-v2-sticky-col payroll-v2-sticky-col-2">Salary Type</th>
+                        <th colspan="4" class="text-center payroll-v2-sticky-col payroll-v2-sticky-salary-group">Salary</th>
+                        <th colspan="1" class="text-center">Working</th>
+                        <th colspan="2" class="text-center">Absent</th>
+                        <th rowspan="2" class="text-center">Gross Salary</th>
+                        <th colspan="3" class="text-center">Regular Overtime</th>
+                        <th colspan="3" class="text-center">Special Non-Working /<br />Sunday - Rest Day</th>
+                        <th colspan="3" class="text-center">Regular Holiday</th>
+                        <th colspan="3" class="text-center">Night Diff</th>
+                        <th colspan="2" class="text-center">Leave With Pay</th>
+                        <th colspan="3" class="text-center">Government Dues</th>
+                        <th colspan="2" class="text-center">Late/Undertime</th>
+                        <th colspan="3" class="text-center">SSS &amp; PAG-IBIG Loan</th>
+                        <th rowspan="2" class="text-center">To Add</th>
+                        <th rowspan="2" class="text-center">To Deduct</th>
+                        <th rowspan="2" class="text-center">Actual Salary<br />This Cutoff</th>
+                        <th rowspan="2" class="text-center">BPI / Cash</th>
+                    </tr>
+                    <tr class="payroll-v2-header-row-3">
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-3">Monthly Salary</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-4">Bi-Monthly</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-5">Daily Rate</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-6">Hourly Rate</th>
+                        <th>Days</th>
+                        <th>Days</th>
+                        <th>Amt</th>
+                        <th>OT Rate</th>
+                        <th>No. of Hours</th>
+                        <th>OT Pay</th>
+                        <th>OT Rate</th>
+                        <th>No. of Hours</th>
+                        <th>OT Pay</th>
+                        <th>OT Rate</th>
+                        <th>No. of Days</th>
+                        <th>OT Pay</th>
+                        <th>OT Rate</th>
+                        <th>No. of Hours</th>
+                        <th>OT Pay</th>
+                        <th>No. of Days</th>
+                        <th>OT Pay</th>
+                        <th>SSS</th>
+                        <th>PhilHealth</th>
+                        <th>Pag-IBIG</th>
+                        <th>Hours</th>
+                        <th>Amount</th>
+                        <th>SSS Salary</th>
+                        <th>SSS Calamity</th>
+                        <th>Pag-IBIG Salary</th>
+                    </tr>
+                </thead>
+                <tbody id="payroll-v2-body">
+                    <tr id="payroll-v2-empty-row">
+                        <td colspan="36" class="text-center text-muted py-4">Select a payroll period and click Generate Payroll.</td>
+                    </tr>
+                </tbody>            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/payroll-v2.js" asp-append-version="true"></script>
+}

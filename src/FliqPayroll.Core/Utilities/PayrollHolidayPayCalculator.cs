@@ -11,7 +11,9 @@ public static class PayrollHolidayPayCalculator
         decimal RegularHolidayPay,
         decimal SpecialHolidayPay,
         decimal WorkingDays,
-        decimal AbsentDays);
+        decimal AbsentDays,
+        decimal RegularHolidayDays,
+        decimal SpecialHolidayDays);
 
     public static Result Calculate(
         DateTime periodStart,
@@ -25,7 +27,7 @@ public static class PayrollHolidayPayCalculator
 
         if (end < start)
         {
-            return new Result(0m, 0m, 0m, 0m, 0m);
+            return new Result(0m, 0m, 0m, 0m, 0m, 0m, 0m);
         }
 
         var attendanceByDate = attendance
@@ -36,6 +38,8 @@ public static class PayrollHolidayPayCalculator
         decimal absentDays = 0;
         decimal regularHolidayPay = 0;
         decimal specialHolidayPay = 0;
+        decimal regularHolidayDays = 0;
+        decimal specialHolidayDays = 0;
 
         for (var date = start; date <= end; date = date.AddDays(1))
         {
@@ -53,6 +57,7 @@ public static class PayrollHolidayPayCalculator
                 switch (holiday.HolidayType)
                 {
                     case HolidayType.Regular:
+                        regularHolidayDays++;
                         if (isPresent && hoursWorked >= PayrollConstants.HoursPerDay)
                         {
                             regularHolidayPay += dailyRate * PayrollConstants.RegularHolidayPresentMultiplier;
@@ -65,6 +70,7 @@ public static class PayrollHolidayPayCalculator
                         break;
 
                     case HolidayType.Special:
+                        specialHolidayDays++;
                         if (isPresent)
                         {
                             specialHolidayPay += dailyRate * PayrollConstants.SpecialNonWorkingRate;
@@ -94,7 +100,9 @@ public static class PayrollHolidayPayCalculator
             regularHolidayPay,
             specialHolidayPay,
             workingDays,
-            absentDays);
+            absentDays,
+            regularHolidayDays,
+            specialHolidayDays);
     }
 
     public static IReadOnlyDictionary<DateTime, HolidayDto> ToHolidayMap(IReadOnlyList<HolidayDto> holidays) =>
