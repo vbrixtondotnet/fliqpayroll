@@ -99,6 +99,48 @@ public class PayrollApiController : ControllerBase
 
     }
 
+    [HttpGet("savedPeriods")]
+    public async Task<ActionResult<ApiResult<IReadOnlyList<SavePayrollPeriodResultDto>>>> GetSavedPeriods(
+        CancellationToken cancellationToken)
+    {
+        var periods = await _payrollService.GetSavedPeriodsAsync(cancellationToken);
+        return Ok(ApiResult<IReadOnlyList<SavePayrollPeriodResultDto>>.Ok(periods));
+    }
+
+    [HttpPost("savePeriod")]
+    public async Task<ActionResult<ApiResult<SavePayrollPeriodResultDto>>> SavePeriod(
+        [FromBody] SavePayrollPeriodRequestDto? request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest(ApiResult<SavePayrollPeriodResultDto>.Fail("Request body is required."));
+        }
+
+        try
+        {
+            var result = await _payrollService.SavePeriodAsync(
+                new SavePayrollPeriodRequestDto
+                {
+                    FromDate = PhilippineTime.ToPhilippineDate(request.FromDate),
+                    ToDate = PhilippineTime.ToPhilippineDate(request.ToDate),
+                    PeriodName = request.PeriodName,
+                    Records = request.Records
+                },
+                cancellationToken);
+
+            return Ok(ApiResult<SavePayrollPeriodResultDto>.Ok(result, "Payroll period saved successfully."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResult<SavePayrollPeriodResultDto>.Fail(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResult<SavePayrollPeriodResultDto>.Fail(ex.Message));
+        }
+    }
+
 }
 
 

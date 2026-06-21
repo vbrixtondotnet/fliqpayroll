@@ -24,19 +24,25 @@ public class ReportService : IReportService
 
     private readonly IEmployeeRepository _employeeRepository;
 
+    private readonly IPayrollPeriodRepository _payrollPeriodRepository;
+
 
 
     public ReportService(
 
         IPayrollService payrollService,
 
-        IEmployeeRepository employeeRepository)
+        IEmployeeRepository employeeRepository,
+
+        IPayrollPeriodRepository payrollPeriodRepository)
 
     {
 
         _payrollService = Guard.AgainstNull(payrollService, nameof(payrollService));
 
         _employeeRepository = Guard.AgainstNull(employeeRepository, nameof(employeeRepository));
+
+        _payrollPeriodRepository = Guard.AgainstNull(payrollPeriodRepository, nameof(payrollPeriodRepository));
 
     }
 
@@ -71,6 +77,58 @@ public class ReportService : IReportService
             TotalDeductions = payroll.Records.Sum(r => r.TotalDeductions),
 
             TotalNetPay = payroll.Records.Sum(r => r.NetPay)
+
+        };
+
+    }
+
+
+
+    public async Task<PayrollSummaryReportDto> GetPayrollSummaryByPeriodIdAsync(
+
+        int payrollPeriodId,
+
+        CancellationToken cancellationToken = default)
+
+    {
+
+        var saved = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken)
+
+            ?? throw new ArgumentException("Saved payroll period not found.");
+
+
+
+        var period = new PayrollPeriodDto
+
+        {
+
+            Name = saved.PeriodName,
+
+            StartDate = saved.FromDate,
+
+            EndDate = saved.ToDate,
+
+            CutoffDay = saved.ToDate.Day
+
+        };
+
+
+
+        return new PayrollSummaryReportDto
+
+        {
+
+            PayrollPeriodId = payrollPeriodId,
+
+            Period = period,
+
+            Records = saved.Records,
+
+            TotalGrossPay = saved.Records.Sum(r => r.GrossPay),
+
+            TotalDeductions = saved.Records.Sum(r => r.TotalDeductions),
+
+            TotalNetPay = saved.Records.Sum(r => r.NetPay)
 
         };
 
@@ -123,6 +181,80 @@ public class ReportService : IReportService
             Payroll = record,
 
             Period = PayrollPeriodHelper.CreateRange(fromDate, toDate),
+
+            Employee = employee
+
+        };
+
+    }
+
+
+
+    public async Task<PayslipDto?> GetPayslipByPeriodIdAsync(
+
+        int employeeId,
+
+        int payrollPeriodId,
+
+        CancellationToken cancellationToken = default)
+
+    {
+
+        var employee = await _employeeRepository.GetByIdAsync(employeeId, cancellationToken);
+
+        if (employee is null)
+
+        {
+
+            return null;
+
+        }
+
+
+
+        var saved = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
+
+        if (saved is null)
+
+        {
+
+            return null;
+
+        }
+
+
+
+        var record = saved.Records.FirstOrDefault(r => r.EmployeeId == employeeId);
+
+        if (record is null)
+
+        {
+
+            return null;
+
+        }
+
+
+
+        return new PayslipDto
+
+        {
+
+            Payroll = record,
+
+            Period = new PayrollPeriodDto
+
+            {
+
+                Name = saved.PeriodName,
+
+                StartDate = saved.FromDate,
+
+                EndDate = saved.ToDate,
+
+                CutoffDay = saved.ToDate.Day
+
+            },
 
             Employee = employee
 

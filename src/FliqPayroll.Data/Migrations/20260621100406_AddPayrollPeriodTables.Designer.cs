@@ -4,6 +4,7 @@ using FliqPayroll.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FliqPayroll.Data.Migrations
 {
     [DbContext(typeof(FliqPayrollDbContext))]
-    partial class FliqPayrollDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260621100406_AddPayrollPeriodTables")]
+    partial class AddPayrollPeriodTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

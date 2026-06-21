@@ -562,6 +562,52 @@
     ]
   },
   {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
+    "Method": "GetSavedPeriods",
+    "RelativePath": "api/payroll/savedPeriods",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[System.Collections.Generic.IReadOnlyList\u00601[[FliqPayroll.Core.DTOs.SavePayrollPeriodResultDto, FliqPayroll.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
+    "Method": "SavePeriod",
+    "RelativePath": "api/payroll/savePeriod",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "FliqPayroll.Core.DTOs.SavePayrollPeriodRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[FliqPayroll.Core.DTOs.SavePayrollPeriodResultDto, FliqPayroll.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
     "ContainingType": "FliqPayroll.Web.Controllers.Api.ReportsApiController",
     "Method": "GetEmployeeHistory",
     "RelativePath": "api/reports/employee-history/{employeeId}",
@@ -663,13 +709,18 @@
     "Order": 0,
     "Parameters": [
       {
+        "Name": "payrollPeriodId",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
         "Name": "fromDate",
-        "Type": "System.DateTime",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       },
       {
         "Name": "toDate",
-        "Type": "System.DateTime",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       }
     ],
@@ -735,13 +786,18 @@
         "IsRequired": false
       },
       {
+        "Name": "payrollPeriodId",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
         "Name": "fromDate",
-        "Type": "System.DateTime",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       },
       {
         "Name": "toDate",
-        "Type": "System.DateTime",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       }
     ],

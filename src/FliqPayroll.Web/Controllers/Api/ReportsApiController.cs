@@ -45,9 +45,11 @@ public class ReportsApiController : ControllerBase
 
     public async Task<ActionResult<ApiResult<PayrollSummaryReportDto>>> GetPayrollSummary(
 
-        [FromQuery] DateTime fromDate,
+        [FromQuery] int? payrollPeriodId,
 
-        [FromQuery] DateTime toDate,
+        [FromQuery] DateTime? fromDate,
+
+        [FromQuery] DateTime? toDate,
 
         CancellationToken cancellationToken)
 
@@ -57,8 +59,34 @@ public class ReportsApiController : ControllerBase
 
         {
 
-            var phFrom = PhilippineTime.ToPhilippineDate(fromDate);
-            var phTo = PhilippineTime.ToPhilippineDate(toDate);
+            if (payrollPeriodId.HasValue)
+
+            {
+
+                var savedReport = await _reportService.GetPayrollSummaryByPeriodIdAsync(
+
+                    payrollPeriodId.Value,
+
+                    cancellationToken);
+
+                return Ok(ApiResult<PayrollSummaryReportDto>.Ok(savedReport));
+
+            }
+
+
+
+            if (!fromDate.HasValue || !toDate.HasValue)
+
+            {
+
+                return BadRequest(ApiResult<PayrollSummaryReportDto>.Fail("Select a saved payroll period."));
+
+            }
+
+
+
+            var phFrom = PhilippineTime.ToPhilippineDate(fromDate.Value);
+            var phTo = PhilippineTime.ToPhilippineDate(toDate.Value);
 
             var report = await _reportService.GetPayrollSummaryAsync(phFrom, phTo, cancellationToken);
 
@@ -119,18 +147,50 @@ public class ReportsApiController : ControllerBase
 
         [FromQuery] int employeeId,
 
-        [FromQuery] DateTime fromDate,
+        [FromQuery] int? payrollPeriodId,
 
-        [FromQuery] DateTime toDate,
+        [FromQuery] DateTime? fromDate,
+
+        [FromQuery] DateTime? toDate,
 
         CancellationToken cancellationToken)
 
     {
 
-        var phFrom = PhilippineTime.ToPhilippineDate(fromDate);
-        var phTo = PhilippineTime.ToPhilippineDate(toDate);
+        PayslipDto? payslip;
 
-        var payslip = await _reportService.GetPayslipAsync(employeeId, phFrom, phTo, cancellationToken);
+        if (payrollPeriodId.HasValue)
+
+        {
+
+            payslip = await _reportService.GetPayslipByPeriodIdAsync(
+
+                employeeId,
+
+                payrollPeriodId.Value,
+
+                cancellationToken);
+
+        }
+
+        else if (fromDate.HasValue && toDate.HasValue)
+
+        {
+
+            var phFrom = PhilippineTime.ToPhilippineDate(fromDate.Value);
+            var phTo = PhilippineTime.ToPhilippineDate(toDate.Value);
+
+            payslip = await _reportService.GetPayslipAsync(employeeId, phFrom, phTo, cancellationToken);
+
+        }
+
+        else
+
+        {
+
+            return BadRequest("Select a saved payroll period.");
+
+        }
 
         if (payslip is null)
 

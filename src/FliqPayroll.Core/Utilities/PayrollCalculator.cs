@@ -161,9 +161,11 @@ public static class PayrollCalculator
 
         var monthlySalary = salaryType switch
         {
-            SalaryType.Daily => Round(employee.BasicSalary * PayrollConstants.MonthlyWorkingDaysDivisor),
+            SalaryType.Daily => 0m,
             _ => employee.BasicSalary
         };
+
+        var biMonthlySalary = salaryType == SalaryType.Daily ? 0m : Round(rates.BiMonthly);
 
         var absentAmount = salaryType == SalaryType.Monthly
             ? absenceDeduction
@@ -201,7 +203,7 @@ public static class PayrollCalculator
             SalaryType = salaryType,
             BasicSalary = employee.BasicSalary,
             MonthlySalary = monthlySalary,
-            BiMonthlySalary = Round(rates.BiMonthly),
+            BiMonthlySalary = biMonthlySalary,
             DailyRate = Round(rates.Daily),
             HourlyRate = Round(rates.Hourly),
             WorkingDays = metrics.WorkingDays,

@@ -62,6 +62,12 @@ public interface IPayrollService
 
     Task<PayrollByDateRangeDto> GetByDateRangeAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
 
+    Task<SavePayrollPeriodResultDto> SavePeriodAsync(SavePayrollPeriodRequestDto request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SavePayrollPeriodResultDto>> GetSavedPeriodsAsync(CancellationToken cancellationToken = default);
+
+    Task<PayrollByDateRangeDto?> GetSavedPeriodByIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
+
 }
 
 
@@ -84,7 +90,11 @@ public interface IReportService
 
     Task<PayrollSummaryReportDto> GetPayrollSummaryAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
 
+    Task<PayrollSummaryReportDto> GetPayrollSummaryByPeriodIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
+
     Task<PayslipDto?> GetPayslipAsync(int employeeId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
+    Task<PayslipDto?> GetPayslipByPeriodIdAsync(int employeeId, int payrollPeriodId, CancellationToken cancellationToken = default);
 
     Task<EmployeePayrollHistoryDto?> GetEmployeeHistoryAsync(int employeeId, CancellationToken cancellationToken = default);
 

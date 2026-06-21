@@ -3,7 +3,8 @@
 
     const api = {
         getByDateRange: "/api/payroll/getByDateRange",
-        defaultPeriod: "/api/payroll/defaultPeriod"
+        defaultPeriod: "/api/payroll/defaultPeriod",
+        savePeriod: "/api/payroll/savePeriod"
     };
 
     const patterns = {
@@ -13,6 +14,9 @@
     };
 
     let loadRequest = null;
+    let saveRequest = null;
+    let currentPeriodName = "";
+    let payrollGenerated = false;
 
     function sanitizeInput(value) {
         return String(value || "").trim().replace(/,/g, "");
@@ -88,6 +92,61 @@
         }
 
         return parseNumber($field.text());
+    }
+
+    function getFieldText($row, fieldName) {
+        var $field = $row.find('[data-field="' + fieldName + '"]');
+        if ($field.length === 0) {
+            return "";
+        }
+
+        return String($field.text() || "").trim();
+    }
+
+    function getEmployeeId($row) {
+        var raw = $row.attr("data-employee-id");
+        var id = parseInt(raw, 10);
+        return isNaN(id) ? 0 : id;
+    }
+
+    function getDataAttr($row, name) {
+        var value = $row.attr("data-" + name);
+        return value == null ? "" : String(value);
+    }
+
+    function getAjaxErrorMessage(xhr, fallback) {
+        var message = fallback;
+        var payload = xhr.responseJSON;
+
+        if (!payload) {
+            return message;
+        }
+
+        if (payload.Message) {
+            return payload.Message;
+        }
+
+        if (payload.title) {
+            message = payload.title;
+
+            if (payload.errors) {
+                var details = [];
+                Object.keys(payload.errors).forEach(function (key) {
+                    var messages = payload.errors[key];
+                    if (Array.isArray(messages)) {
+                        details = details.concat(messages);
+                    }
+                });
+
+                if (details.length > 0) {
+                    message += " " + details.join(" ");
+                }
+            }
+
+            return message;
+        }
+
+        return message;
     }
 
     function setFieldValue($row, fieldName, value, format) {
@@ -257,6 +316,22 @@
         $("#payroll-v2-alert").addClass("d-none").text("");
     }
 
+    function hideSaveSuccess() {
+        $("#payroll-v2-save-success").addClass("d-none").text("");
+    }
+
+    function showSaveSuccess(message) {
+        $("#payroll-v2-save-success").removeClass("d-none").text(message);
+    }
+
+    function setSaveButtonVisible(isVisible) {
+        $("#payroll-v2-save-btn").toggleClass("d-none", !isVisible);
+    }
+
+    function setSaving(isSaving) {
+        $("#payroll-v2-save-btn").prop("disabled", isSaving);
+    }
+
     function setLoading(isLoading) {
         $("#payroll-v2-loading").toggleClass("d-none", !isLoading);
         $("#payroll-v2-from-date, #payroll-v2-to-date, #payroll-v2-generate-btn").prop("disabled", isLoading);
@@ -284,7 +359,8 @@
         }
 
         var fieldAttr = fieldName ? ' data-field="' + fieldName + '"' : "";
-        return '<td class="' + classes.join(" ") + '"' + fieldAttr + ">" + formatMoney(value) + "</td>";
+        var display = value == null ? "" : formatMoney(value);
+        return '<td class="' + classes.join(" ") + '"' + fieldAttr + ">" + display + "</td>";
     }
 
     function editableInput(value, type, fieldName) {
@@ -334,14 +410,24 @@
     }
 
     function renderRow(record) {
+        var isDaily = record.SalaryType === 1;
+        var dailyRate = isDaily ? record.BasicSalary : record.DailyRate;
+
         return [
-            '<tr data-salary-type="', record.SalaryType, '" data-hourly-rate="', record.HourlyRate, '" data-daily-rate="', record.DailyRate, '" data-base-gross="', record.GrossSalary, '">',
+            '<tr data-employee-id="', record.EmployeeId,
+            '" data-employee-code="', escapeHtml(record.EmployeeCode),
+            '" data-basic-salary="', record.BasicSalary,
+            '" data-position="', escapeHtml(record.Position || ""),
+            '" data-salary-type="', record.SalaryType,
+            '" data-hourly-rate="', record.HourlyRate,
+            '" data-daily-rate="', dailyRate,
+            '" data-base-gross="', record.GrossSalary, '">',
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1">', escapeHtml(record.EmployeeName), "</td>",
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-2 text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
-            readonlyMoney(record.MonthlySalary, "", "payroll-v2-sticky-col-3"),
-            readonlyMoney(record.BiMonthlySalary, "", "payroll-v2-sticky-col-4"),
-            readonlyMoney(record.DailyRate, "", "payroll-v2-sticky-col-5"),
-            readonlyMoney(record.HourlyRate, "", "payroll-v2-sticky-col-6"),
+            readonlyMoney(isDaily ? null : record.MonthlySalary, "", "payroll-v2-sticky-col-3", "monthlySalary"),
+            readonlyMoney(isDaily ? null : record.BiMonthlySalary, "", "payroll-v2-sticky-col-4", "biMonthlySalary"),
+            readonlyMoney(dailyRate, "", "payroll-v2-sticky-col-5", "dailyRate"),
+            readonlyMoney(record.HourlyRate, "", "payroll-v2-sticky-col-6", "hourlyRate"),
             editableInput(record.WorkingDays, "number", "workingDays"),
             editableInput(record.AbsentDays, "number", "absentDays"),
             readonlyMoney(record.AbsentAmount, "", "", "absentAmount"),
@@ -371,14 +457,121 @@
             editableInput(record.ToAdd, "money", "toAdd"),
             editableInput(record.ToDeduct, "money", "toDeduct"),
             readonlyMoney(record.NetPay, "fw-semibold text-primary", "", "netPay"),
-            '<td class="payroll-v2-readonly">', escapeHtml(record.PaymentMethod || "Cash"), "</td>",
+            '<td class="payroll-v2-readonly" data-field="paymentMethod">', escapeHtml(record.PaymentMethod || "Cash"), "</td>",
             "</tr>"
         ].join("");
+    }
+
+    function collectRowPayload($row) {
+        var salaryType = parseInt($row.data("salary-type"), 10);
+        var grossSalary = getFieldValue($row, "grossSalary");
+        var regularOtPay = getFieldValue($row, "regularOtPay");
+        var specialOtPay = getFieldValue($row, "specialOtPay");
+        var holidayOtPay = getFieldValue($row, "holidayOtPay");
+        var nightDiffOtPay = getFieldValue($row, "nightDiffOtPay");
+        var leavePay = getFieldValue($row, "leavePay");
+        var absentAmount = getFieldValue($row, "absentAmount");
+        var lateUndertimeAmount = getFieldValue($row, "lateUndertimeAmount");
+        var toAdd = getFieldValue($row, "toAdd");
+        var toDeduct = getFieldValue($row, "toDeduct");
+        var sss = getFieldValue($row, "sss");
+        var philHealth = getFieldValue($row, "philHealth");
+        var pagIbig = getFieldValue($row, "pagIbig");
+        var sssLoan = getFieldValue($row, "sssLoan");
+        var sssCalamity = getFieldValue($row, "sssCalamity");
+        var pagIbigLoan = getFieldValue($row, "pagIbigLoan");
+        var totalDeductions = sss + philHealth + pagIbig + lateUndertimeAmount + sssLoan + sssCalamity + pagIbigLoan + toDeduct;
+
+        if (salaryType === 0) {
+            totalDeductions += absentAmount;
+        }
+
+        return {
+            EmployeeId: getEmployeeId($row),
+            EmployeeName: $row.find(".payroll-v2-sticky-col-1").text().trim(),
+            EmployeeCode: getDataAttr($row, "employee-code"),
+            Position: getDataAttr($row, "position"),
+            SalaryType: salaryType,
+            BasicSalary: parseFloat($row.data("basic-salary")) || 0,
+            MonthlySalary: getFieldValue($row, "monthlySalary"),
+            BiMonthlySalary: getFieldValue($row, "biMonthlySalary"),
+            DailyRate: getFieldValue($row, "dailyRate"),
+            HourlyRate: getFieldValue($row, "hourlyRate"),
+            WorkingDays: getFieldValue($row, "workingDays"),
+            AbsentDays: getFieldValue($row, "absentDays"),
+            AbsentAmount: absentAmount,
+            BasicPayAmount: grossSalary,
+            GrossSalary: grossSalary,
+            RegularOtRate: getFieldValue($row, "regularOtRate"),
+            RegularOtHours: getFieldValue($row, "regularOtHours"),
+            SpecialOtRate: getFieldValue($row, "specialOtRate"),
+            SpecialOtHours: getFieldValue($row, "specialOtHours"),
+            SpecialOtPay: specialOtPay,
+            HolidayOtRate: getFieldValue($row, "holidayOtRate"),
+            HolidayDays: getFieldValue($row, "holidayDays"),
+            HolidayOtPay: holidayOtPay,
+            NightDiffOtRate: getFieldValue($row, "nightDiffOtRate"),
+            NightDiffHours: getFieldValue($row, "nightDiffHours"),
+            NightDiffOtPay: nightDiffOtPay,
+            LeaveDays: getFieldValue($row, "leaveDays"),
+            OvertimePay: regularOtPay,
+            HolidayPay: roundMoney(holidayOtPay + specialOtPay),
+            RegularHolidayPay: holidayOtPay,
+            SpecialNonWorkingPay: specialOtPay,
+            LeaveWithPay: leavePay,
+            Incentives: 0,
+            Allowances: 0,
+            Bonuses: 0,
+            AdjustmentsEarnings: toAdd,
+            GrossPay: roundMoney(grossSalary + regularOtPay + specialOtPay + holidayOtPay + nightDiffOtPay + leavePay + toAdd),
+            AbsenceDeduction: salaryType === 0 ? absentAmount : 0,
+            LateDeduction: lateUndertimeAmount,
+            LateUndertimeHours: getFieldValue($row, "lateUndertimeHours"),
+            LateUndertimeAmount: lateUndertimeAmount,
+            UndertimeDeduction: 0,
+            CashAdvance: 0,
+            SssDeduction: sss,
+            PhilHealthDeduction: philHealth,
+            PagIbigDeduction: pagIbig,
+            SssLoanDeduction: sssLoan,
+            SssCalamityDeduction: sssCalamity,
+            PagIbigLoanDeduction: pagIbigLoan,
+            WithholdingTax: 0,
+            OtherDeductions: 0,
+            ToAdd: toAdd,
+            ToDeduct: toDeduct,
+            TotalDeductions: roundMoney(totalDeductions),
+            NetPay: getFieldValue($row, "netPay"),
+            PaymentMethod: getFieldText($row, "paymentMethod") || "Cash",
+            Status: 1
+        };
+    }
+
+    function collectTablePayload() {
+        var records = [];
+
+        $("#payroll-v2-body tr").each(function () {
+            var $row = $(this);
+            if (!getEmployeeId($row)) {
+                return;
+            }
+
+            records.push(collectRowPayload($row));
+        });
+
+        return {
+            FromDate: $("#payroll-v2-from-date").val(),
+            ToDate: $("#payroll-v2-to-date").val(),
+            PeriodName: currentPeriodName || $("#payroll-v2-period-label").text(),
+            Records: records
+        };
     }
 
     function renderRows(records) {
         var $body = $("#payroll-v2-body");
         $body.empty();
+        payrollGenerated = false;
+        setSaveButtonVisible(false);
 
         if (!records || records.length === 0) {
             $body.append('<tr><td colspan="36" class="text-center text-muted py-4">No payroll records for this period.</td></tr>');
@@ -388,6 +581,9 @@
         records.forEach(function (record) {
             $body.append(renderRow(record));
         });
+
+        payrollGenerated = true;
+        setSaveButtonVisible(true);
     }
 
     function setDefaultDates(callback) {
@@ -438,7 +634,10 @@
         }
 
         hideError();
+        hideSaveSuccess();
         setLoading(true);
+        setSaveButtonVisible(false);
+        payrollGenerated = false;
 
         var periodLabel = formatPeriodLabel(range.fromDate, range.toDate);
         $("#payroll-v2-period-label").text(periodLabel);
@@ -451,6 +650,7 @@
                 }
 
                 var periodName = response.Data.PeriodName || periodLabel;
+                currentPeriodName = periodName;
                 $("#payroll-v2-period-label").text(periodName);
                 updatePeriodInfo(periodName);
                 renderRows(response.Data.Records);
@@ -468,9 +668,63 @@
             });
     }
 
+    function savePayrollPeriod() {
+        if (!payrollGenerated) {
+            showError("Generate payroll before saving.");
+            return;
+        }
+
+        var payload = collectTablePayload();
+
+        if (!payload.FromDate || !payload.ToDate) {
+            showError("Select both From and To dates.");
+            return;
+        }
+
+        if (!payload.Records.length) {
+            showError("No payroll rows to save.");
+            return;
+        }
+
+        if (saveRequest) {
+            saveRequest.abort();
+        }
+
+        hideError();
+        hideSaveSuccess();
+        setSaving(true);
+
+        saveRequest = $.ajax({
+            url: api.savePeriod,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload)
+        })
+            .done(function (response) {
+                if (!response || !response.Success) {
+                    showError((response && response.Message) || "Unable to save payroll period.");
+                    return;
+                }
+
+                showSaveSuccess(response.Message || "Payroll period saved successfully.");
+            })
+            .fail(function (xhr) {
+                if (xhr.statusText === "abort") {
+                    return;
+                }
+
+                showError(getAjaxErrorMessage(xhr, "Failed to save payroll period."));
+            })
+            .always(function () {
+                saveRequest = null;
+                setSaving(false);
+            });
+    }
+
     function bindPeriodControls() {
         setDefaultDates();
         $("#payroll-v2-generate-btn").on("click", loadPayroll);
+        $("#payroll-v2-save-btn").on("click", savePayrollPeriod);
     }
 
     $(function () {

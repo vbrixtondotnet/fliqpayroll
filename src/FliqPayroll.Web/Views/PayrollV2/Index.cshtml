@@ -19,11 +19,13 @@
                 <input type="date" id="payroll-v2-to-date" class="form-control" style="width: auto;" />
             </div>
             <button type="button" id="payroll-v2-generate-btn" class="btn btn-primary">Generate Payroll</button>
+            <button type="button" id="payroll-v2-save-btn" class="btn btn-success d-none">Save Payroll Period</button>
         </div>
     </div>
 </div>
 
 <div id="payroll-v2-period-info" class="alert alert-light border mb-3 d-none"></div>
+<div id="payroll-v2-save-success" class="alert alert-success d-none" role="alert"></div>
 <div id="payroll-v2-alert" class="alert alert-danger d-none" role="alert"></div>
 <div id="payroll-v2-loading" class="text-center py-3 mb-3 d-none" aria-live="polite">
     <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -71,10 +73,10 @@
                         <th rowspan="2" class="text-center">BPI / Cash</th>
                     </tr>
                     <tr class="payroll-v2-header-row-3">
-                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-3">Monthly Salary</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-3">Monthly</th>
                         <th class="payroll-v2-sticky-col payroll-v2-sticky-col-4">Bi-Monthly</th>
-                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-5">Daily Rate</th>
-                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-6">Hourly Rate</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-5">Daily</th>
+                        <th class="payroll-v2-sticky-col payroll-v2-sticky-col-6">Hourly</th>
                         <th>Days</th>
                         <th>Days</th>
                         <th>Amt</th>

@@ -48,4 +48,5 @@ public class Employee
     public DateTime? UpdatedAt { get; set; }
 
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
+    public ICollection<PayrollRecord> PayrollRecords { get; set; } = new List<PayrollRecord>();
 }

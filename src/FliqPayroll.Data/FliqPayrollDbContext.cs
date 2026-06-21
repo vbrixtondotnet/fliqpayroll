@@ -33,6 +33,8 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<Holiday> Holidays => Set<Holiday>();
+    public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
+    public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
 
 
 
@@ -157,6 +159,34 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.HolidayId);
             entity.HasIndex(e => e.Date).IsUnique();
             entity.Property(e => e.Description).HasMaxLength(200).IsRequired();
+        });
+
+        modelBuilder.Entity<PayrollPeriod>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => new { e.StartDate, e.EndDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<PayrollRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EmployeeName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.EmployeeCode).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Position).HasMaxLength(100);
+            entity.Property(e => e.PaymentMethod).HasMaxLength(100);
+            entity.HasIndex(e => new { e.EmployeeId, e.PayrollPeriodId }).IsUnique();
+            entity.HasOne(e => e.Employee).WithMany(e => e.PayrollRecords).HasForeignKey(e => e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PayrollPeriod).WithMany(e => e.PayrollRecords).HasForeignKey(e => e.PayrollPeriodId).OnDelete(DeleteBehavior.Cascade);
+
+            foreach (var property in entity.Metadata.GetProperties())
+            {
+                if (property.ClrType == typeof(decimal) || property.ClrType == typeof(decimal?))
+                {
+                    property.SetPrecision(18);
+                    property.SetScale(2);
+                }
+            }
         });
 
     }

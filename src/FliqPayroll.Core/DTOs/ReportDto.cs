@@ -9,6 +9,7 @@ public class PayslipDto
 
 public class PayrollSummaryReportDto
 {
+    public int PayrollPeriodId { get; set; }
     public PayrollPeriodDto Period { get; set; } = new();
     public IReadOnlyList<PayrollDto> Records { get; set; } = [];
     public decimal TotalGrossPay { get; set; }

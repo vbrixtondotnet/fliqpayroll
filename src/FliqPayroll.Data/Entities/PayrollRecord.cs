@@ -1,9 +1,11 @@
 using FliqPayroll.Core.Enums;
 
-namespace FliqPayroll.Core.DTOs;
+namespace FliqPayroll.Data.Entities;
 
-public class PayrollDto
+public class PayrollRecord
 {
+    public int Id { get; set; }
+    public int PayrollPeriodId { get; set; }
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public string EmployeeCode { get; set; } = string.Empty;
@@ -60,39 +62,11 @@ public class PayrollDto
     public decimal TotalDeductions { get; set; }
     public decimal NetPay { get; set; }
     public string? PaymentMethod { get; set; }
-    public PayrollStatus Status { get; set; }
-}
+    public PayrollStatus Status { get; set; } = PayrollStatus.Calculated;
+    public bool IsLocked { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
-public class PayrollPeriodDto
-{
-    public string Name { get; set; } = string.Empty;
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public int CutoffDay { get; set; }
-    public PayrollPeriodStatus Status { get; set; }
-}
-
-public class PayrollByDateRangeDto
-{
-    public DateTime FromDate { get; set; }
-    public DateTime ToDate { get; set; }
-    public string PeriodName { get; set; } = string.Empty;
-    public IReadOnlyList<PayrollDto> Records { get; set; } = [];
-}
-
-public class SavePayrollPeriodRequestDto
-{
-    public DateTime FromDate { get; set; }
-    public DateTime ToDate { get; set; }
-    public string PeriodName { get; set; } = string.Empty;
-    public IReadOnlyList<PayrollDto> Records { get; set; } = [];
-}
-
-public class SavePayrollPeriodResultDto
-{
-    public int PayrollPeriodId { get; set; }
-    public string PeriodName { get; set; } = string.Empty;
-    public DateTime FromDate { get; set; }
-    public DateTime ToDate { get; set; }
-    public int RecordCount { get; set; }
+    public PayrollPeriod PayrollPeriod { get; set; } = null!;
+    public Employee Employee { get; set; } = null!;
 }
