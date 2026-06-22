@@ -58,6 +58,7 @@ C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\li
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\jquery\dist\jquery.min.map
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\js\bootstrap.min.js
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\css\bootstrap-utilities.min.css.map
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\js\payroll-v2.js
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.rtl.min.css
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\js\holiday-calendar.js
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\jquery\dist\jquery.min.js
@@ -71,11 +72,13 @@ C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\li
 wwwroot\css\site.css
 wwwroot\favicon.ico
 wwwroot\images\flig-logo-h-white.png
+wwwroot\images\fliq-athletics-logo.png
 wwwroot\js\attendance.js
 wwwroot\js\biometrics.js
 wwwroot\js\dashboard.js
 wwwroot\js\employees.js
 wwwroot\js\holiday-calendar.js
+wwwroot\js\payroll-v2.js
 wwwroot\js\payroll.js
 wwwroot\js\payslips.js
 wwwroot\js\ph-time.js

@@ -278,6 +278,12 @@
         $("#employee-add-btn").on("click", openCreateModal);
         $("#employee-save-btn").on("click", saveEmployee);
         $("#employee-filter-btn").on("click", loadEmployees);
+        $("#employee-filter-search").on("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                loadEmployees();
+            }
+        });
         $("#employee-filter-reset-btn").on("click", function () {
             $("#employee-filter-search").val("");
             $("#employee-filter-department").val("");

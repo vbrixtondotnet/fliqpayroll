@@ -51,11 +51,8 @@ public class PayslipPdfService
 
         return Document.Create(container =>
         {
-            for (var index = 0; index < payslips.Count; index += 2)
+            foreach (var payslip in payslips)
             {
-                var leftPayslip = payslips[index];
-                var rightPayslip = index + 1 < payslips.Count ? payslips[index + 1] : null;
-
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4.Landscape());
@@ -65,13 +62,9 @@ public class PayslipPdfService
 
                     page.Content().Row(row =>
                     {
-                        row.RelativeItem().Element(c => ComposePayslip(c, leftPayslip, layout));
-
-                        if (rightPayslip is not null)
-                        {
-                            row.ConstantItem(12);
-                            row.RelativeItem().Element(c => ComposePayslip(c, rightPayslip, layout));
-                        }
+                        row.RelativeItem().Element(c => ComposePayslip(c, payslip, layout));
+                        row.ConstantItem(12);
+                        row.RelativeItem().Element(c => ComposePayslip(c, payslip, layout));
                     });
                 });
             }

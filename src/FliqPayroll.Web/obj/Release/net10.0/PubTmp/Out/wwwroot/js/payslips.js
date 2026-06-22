@@ -2,56 +2,101 @@
     "use strict";
 
     const api = {
+        savedPeriods: "/api/payroll/savedPeriods",
         summary: "/api/reports/payroll-summary",
-        defaultPeriod: "/api/payroll/defaultPeriod",
-        payslipPdf: function (employeeId, fromDate, toDate) {
+        payslipPdf: function (employeeId, payrollPeriodId) {
             return "/api/reports/payslip/pdf?employeeId=" + employeeId +
-                "&fromDate=" + encodeURIComponent(fromDate) +
-                "&toDate=" + encodeURIComponent(toDate);
+                "&payrollPeriodId=" + payrollPeriodId;
+        },
+        allPayslipsPdf: function (payrollPeriodId) {
+            return "/api/reports/payslip/pdf/all?payrollPeriodId=" + payrollPeriodId;
         }
     };
+
+    let selectedPeriodId = null;
+    let hasGeneratedRecords = false;
 
     function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value || 0);
     }
 
-    function formatDateInput(date) {
-        return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
     }
 
     function showError(message) {
         $("#payslips-alert").removeClass("d-none").text(message);
     }
 
-    function getDateRange() {
-        return {
-            fromDate: $("#payslips-from-date").val(),
-            toDate: $("#payslips-to-date").val()
-        };
+    function hideError() {
+        $("#payslips-alert").addClass("d-none").text("");
     }
 
-    function setDefaultDates(callback) {
-        $.getJSON(api.defaultPeriod)
+    function setGenerateEnabled(isEnabled) {
+        $("#payslips-generate-btn").prop("disabled", !isEnabled);
+    }
+
+    function setDownloadAllVisible(isVisible) {
+        $("#payslips-table-toolbar").toggleClass("d-none", !isVisible);
+
+        if (isVisible && selectedPeriodId) {
+            $("#payslips-download-all-btn").attr("href", api.allPayslipsPdf(selectedPeriodId));
+        } else {
+            $("#payslips-download-all-btn").attr("href", "#");
+        }
+    }
+
+    function resetSummary() {
+        $("#payslip-total-gross").text("—");
+        $("#payslip-total-deductions").text("—");
+        $("#payslip-total-net").text("—");
+        hasGeneratedRecords = false;
+        setDownloadAllVisible(false);
+    }
+
+    function populatePeriodSelect(periods) {
+        var $select = $("#payslips-period-select");
+        $select.find("option:not(:first)").remove();
+
+        if (!periods || periods.length === 0) {
+            $select.append('<option value="" disabled>No saved payroll periods</option>');
+            setGenerateEnabled(false);
+            return;
+        }
+
+        periods.forEach(function (period) {
+            var label = period.PeriodName;
+            if (period.RecordCount != null) {
+                label += " (" + period.RecordCount + " employees)";
+            }
+
+            $select.append(
+                $("<option></option>")
+                    .val(String(period.PayrollPeriodId))
+                    .text(label)
+            );
+        });
+    }
+
+    function loadSavedPeriods() {
+        $.getJSON(api.savedPeriods)
             .done(function (response) {
-                if (response && response.Success && response.Data) {
-                    const period = response.Data;
-                    $("#payslips-from-date").val(PhTime.parseDateKey(period.StartDate));
-                    $("#payslips-to-date").val(PhTime.parseDateKey(period.EndDate));
-                } else {
-                    const today = PhTime.now();
-                    const start = PhTime.startOfMonth(today);
-                    $("#payslips-from-date").val(formatDateInput(start));
-                    $("#payslips-to-date").val(formatDateInput(today));
+                if (!response || !response.Success) {
+                    showError((response && response.Message) || "Unable to load saved payroll periods.");
+                    populatePeriodSelect([]);
+                    return;
                 }
 
-                if (callback) callback();
+                hideError();
+                populatePeriodSelect(response.Data || []);
             })
             .fail(function () {
-                const today = PhTime.now();
-                const start = PhTime.startOfMonth(today);
-                $("#payslips-from-date").val(formatDateInput(start));
-                $("#payslips-to-date").val(formatDateInput(today));
-                if (callback) callback();
+                showError("Failed to load saved payroll periods.");
+                populatePeriodSelect([]);
             });
     }
 
@@ -60,47 +105,46 @@
         $("#payslip-total-deductions").text(formatCurrency(report.TotalDeductions));
         $("#payslip-total-net").text(formatCurrency(report.TotalNetPay));
 
-        const range = getDateRange();
-        const $body = $("#payslips-body");
+        var $body = $("#payslips-body");
         $body.empty();
 
         if (!report.Records || report.Records.length === 0) {
             $body.append('<tr><td colspan="7" class="text-center text-muted py-4">No records for this period.</td></tr>');
+            hasGeneratedRecords = false;
+            setDownloadAllVisible(false);
             return;
         }
 
         report.Records.forEach(function (record) {
             $body.append([
                 "<tr>",
-                "<td>" + record.EmployeeCode + "</td>",
-                "<td>" + record.EmployeeName + "</td>",
-                "<td>" + (record.Position || "—") + "</td>",
-                "<td>" + formatCurrency(record.GrossPay) + "</td>",
-                "<td>" + formatCurrency(record.TotalDeductions) + "</td>",
-                "<td><strong>" + formatCurrency(record.NetPay) + "</strong></td>",
-                '<td><a href="' + api.payslipPdf(record.EmployeeId, range.fromDate, range.toDate) +
-                '" class="btn btn-sm btn-outline-primary" target="_blank">PDF</a></td>',
+                "<td>", escapeHtml(record.EmployeeCode), "</td>",
+                "<td>", escapeHtml(record.EmployeeName), "</td>",
+                "<td>", escapeHtml(record.Position || "—"), "</td>",
+                "<td>", formatCurrency(record.GrossPay), "</td>",
+                "<td>", formatCurrency(record.TotalDeductions), "</td>",
+                "<td><strong>", formatCurrency(record.NetPay), "</strong></td>",
+                '<td><a href="' + api.payslipPdf(record.EmployeeId, selectedPeriodId) +
+                '" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">PDF</a></td>',
                 "</tr>"
             ].join(""));
         });
+
+        hasGeneratedRecords = true;
+        setDownloadAllVisible(true);
     }
 
     function generatePayslips() {
-        const range = getDateRange();
-
-        if (!range.fromDate || !range.toDate) {
-            showError("Select both From and To dates.");
+        if (!selectedPeriodId) {
+            showError("Select a saved payroll period.");
             return;
         }
 
-        if (range.toDate < range.fromDate) {
-            showError("To date must be on or after From date.");
-            return;
-        }
+        hideError();
+        setGenerateEnabled(false);
+        setDownloadAllVisible(false);
 
-        $("#payslips-alert").addClass("d-none");
-
-        $.getJSON(api.summary, range)
+        $.getJSON(api.summary, { payrollPeriodId: selectedPeriodId })
             .done(function (response) {
                 if (!response || !response.Success) {
                     showError((response && response.Message) || "Unable to generate payslips.");
@@ -109,11 +153,39 @@
 
                 renderSummary(response.Data);
             })
-            .fail(function () { showError("Failed to generate payslips."); });
+            .fail(function (xhr) {
+                var message = "Failed to generate payslips.";
+                if (xhr.responseJSON && xhr.responseJSON.Message) {
+                    message = xhr.responseJSON.Message;
+                }
+
+                showError(message);
+            })
+            .always(function () {
+                setGenerateEnabled(!!selectedPeriodId);
+            });
     }
 
     $(function () {
-        setDefaultDates();
+        resetSummary();
+        loadSavedPeriods();
+
+        $("#payslips-period-select").on("change", function () {
+            selectedPeriodId = $(this).val() || null;
+            setGenerateEnabled(!!selectedPeriodId);
+            resetSummary();
+            $("#payslips-body").html(
+                '<tr><td colspan="7" class="text-center text-muted py-4">Select a saved payroll period and generate payslips.</td></tr>'
+            );
+        });
+
         $("#payslips-generate-btn").on("click", generatePayslips);
+
+        $("#payslips-download-all-btn").on("click", function (event) {
+            if (!hasGeneratedRecords || !selectedPeriodId) {
+                event.preventDefault();
+                showError("Generate payslips before downloading all.");
+            }
+        });
     });
 })(jQuery);

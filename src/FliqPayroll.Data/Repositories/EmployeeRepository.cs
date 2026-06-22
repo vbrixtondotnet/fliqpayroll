@@ -52,15 +52,9 @@ public class EmployeeRepository : IEmployeeRepository
 
                 query = query.Where(e =>
 
-                    e.EmployeeCode.Contains(search) ||
+                    e.FirstName.StartsWith(search) ||
 
-                    e.FirstName.Contains(search) ||
-
-                    e.LastName.Contains(search) ||
-
-                    (e.MiddleName != null && e.MiddleName.Contains(search)) ||
-
-                    (e.Email != null && e.Email.Contains(search)));
+                    e.LastName.StartsWith(search));
 
             }
 
