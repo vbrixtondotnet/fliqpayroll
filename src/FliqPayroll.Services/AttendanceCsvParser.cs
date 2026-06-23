@@ -1,12 +1,13 @@
 using System.Globalization;
 using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
+using FliqPayroll.Core.Utilities;
 
 namespace FliqPayroll.Services;
 
 internal static class AttendanceCsvParser
 {
-    private static readonly CultureInfo ParseCulture = CultureInfo.GetCultureInfo("en-US");
+    private static readonly CultureInfo BiometricDateCulture = CultureInfo.GetCultureInfo("en-US");
 
     public static string NormalizeLine(string line)
     {
@@ -139,19 +140,20 @@ internal static class AttendanceCsvParser
         var trimmed = value.Trim();
         var formats = new[]
         {
-            "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy",
+            "MM/dd/yyyy", "M/d/yyyy", "MM/dd/yy", "M/d/yy",
+            "dd/MM/yyyy", "d/M/yyyy",
             "yyyy-MM-dd", "yyyy/MM/dd", "yyyyMMdd", "MM-dd-yyyy", "M-d-yyyy"
         };
 
-        if (DateTime.TryParseExact(trimmed, formats, ParseCulture, DateTimeStyles.None, out date))
+        if (DateTime.TryParseExact(trimmed, formats, BiometricDateCulture, DateTimeStyles.None, out date))
         {
-            date = date.Date;
+            date = PhilippineTime.ForDateStorage(date);
             return true;
         }
 
-        if (DateTime.TryParse(trimmed, ParseCulture, DateTimeStyles.None, out date))
+        if (DateTime.TryParse(trimmed, BiometricDateCulture, DateTimeStyles.None, out date))
         {
-            date = date.Date;
+            date = PhilippineTime.ForDateStorage(date);
             return true;
         }
 
@@ -167,7 +169,7 @@ internal static class AttendanceCsvParser
             "HH:mm:ss", "H:mm:ss", "HH:mm", "H:mm"
         };
 
-        if (DateTime.TryParseExact(trimmed, formats, ParseCulture, DateTimeStyles.None, out var parsed))
+        if (DateTime.TryParseExact(trimmed, formats, BiometricDateCulture, DateTimeStyles.None, out var parsed))
         {
             time = parsed.TimeOfDay;
             return true;

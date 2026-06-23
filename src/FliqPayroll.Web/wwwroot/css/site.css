@@ -464,41 +464,29 @@ body {
   min-width: 260px;
 }
 
-.payroll-v2-col-sticky-2 {
+.payroll-v2-col-2 {
   width: 120px;
   min-width: 120px;
 }
 
-.payroll-v2-col-sticky-3 {
+.payroll-v2-col-3 {
   width: 105px;
   min-width: 105px;
 }
 
-.payroll-v2-col-sticky-4 {
+.payroll-v2-col-4 {
   width: 100px;
   min-width: 100px;
 }
 
-.payroll-v2-col-sticky-5 {
+.payroll-v2-col-5 {
   width: 95px;
   min-width: 95px;
 }
 
-.payroll-v2-col-sticky-6 {
+.payroll-v2-col-6 {
   width: 95px;
   min-width: 95px;
-}
-
-.payroll-v2-sticky-period {
-  position: sticky;
-  left: 0;
-  top: 0;
-  z-index: 12;
-  min-width: 775px;
-  width: 775px;
-  white-space: normal;
-  line-height: 1.25;
-  box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.12);
 }
 
 .payroll-v2-group-loan,
@@ -516,51 +504,15 @@ body {
   left: 0;
   min-width: 260px;
   white-space: normal;
-}
-
-.payroll-v2-sticky-col-2 {
-  left: 260px;
-  min-width: 120px;
-  max-width: 120px;
-}
-
-.payroll-v2-sticky-col-3 {
-  left: 380px;
-  min-width: 105px;
-  max-width: 105px;
-}
-
-.payroll-v2-sticky-col-4 {
-  left: 485px;
-  min-width: 100px;
-  max-width: 100px;
-}
-
-.payroll-v2-sticky-col-5 {
-  left: 585px;
-  min-width: 95px;
-  max-width: 95px;
-}
-
-.payroll-v2-sticky-col-6 {
-  left: 680px;
-  min-width: 95px;
-  max-width: 95px;
   box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.12);
-}
-
-.payroll-v2-sticky-salary-group {
-  left: 380px;
-  min-width: 395px;
-  width: 395px;
-  z-index: 8;
 }
 
 .payroll-v2-table thead .payroll-v2-sticky-col {
   z-index: 8;
 }
 
-.payroll-v2-table tbody .payroll-v2-sticky-col-1 {
+.payroll-v2-table tbody .payroll-v2-sticky-col-1,
+.payroll-v2-table tbody .payroll-v2-employee-name {
   font-weight: 600;
 }
 
@@ -572,45 +524,45 @@ body {
   background: #eceff5 !important;
 }
 
-.payroll-v2-table tbody td.payroll-v2-sticky-col.payroll-v2-salary-type-daily {
+.payroll-v2-table tbody td.payroll-v2-salary-type-daily {
   background: rgba(0, 163, 255, 0.16) !important;
   color: #006da3;
   font-weight: 600;
 }
 
-.payroll-v2-table tbody td.payroll-v2-sticky-col.payroll-v2-salary-type-monthly {
+.payroll-v2-table tbody td.payroll-v2-salary-type-monthly {
   background: rgba(40, 199, 111, 0.18) !important;
   color: #1a9d55;
   font-weight: 600;
 }
 
-.payroll-v2-table tbody td.payroll-v2-sticky-col.payroll-v2-salary-type-fixed {
+.payroll-v2-table tbody td.payroll-v2-salary-type-fixed {
   background: rgba(108, 117, 125, 0.18) !important;
   color: #495057;
   font-weight: 600;
 }
 
-.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-sticky-col.payroll-v2-salary-type-daily {
+.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-salary-type-daily {
   background: rgba(0, 163, 255, 0.22) !important;
 }
 
-.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-sticky-col.payroll-v2-salary-type-monthly {
+.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-salary-type-monthly {
   background: rgba(40, 199, 111, 0.24) !important;
 }
 
-.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-sticky-col.payroll-v2-salary-type-fixed {
+.payroll-v2-table tbody tr:nth-child(even) td.payroll-v2-salary-type-fixed {
   background: rgba(108, 117, 125, 0.24) !important;
 }
 
-.payroll-v2-table tbody tr:hover td.payroll-v2-sticky-col.payroll-v2-salary-type-daily {
+.payroll-v2-table tbody tr:hover td.payroll-v2-salary-type-daily {
   background: rgba(0, 163, 255, 0.28) !important;
 }
 
-.payroll-v2-table tbody tr:hover td.payroll-v2-sticky-col.payroll-v2-salary-type-monthly {
+.payroll-v2-table tbody tr:hover td.payroll-v2-salary-type-monthly {
   background: rgba(40, 199, 111, 0.3) !important;
 }
 
-.payroll-v2-table tbody tr:hover td.payroll-v2-sticky-col.payroll-v2-salary-type-fixed {
+.payroll-v2-table tbody tr:hover td.payroll-v2-salary-type-fixed {
   background: rgba(108, 117, 125, 0.3) !important;
 }
 

@@ -1,5 +1,7 @@
 namespace FliqPayroll.Core.Utilities;
 
+using System.Globalization;
+
 public static class PhilippineTime
 {
     public const string TimeZoneId = "Asia/Manila";
@@ -67,6 +69,42 @@ public static class PhilippineTime
     /// </summary>
     public static DateTime ForDateStorage(DateTime calendarDate) =>
         DateTime.SpecifyKind(ToPhilippineDate(calendarDate), DateTimeKind.Unspecified);
+
+    public static bool TryParseCalendarDate(string? value, out DateTime calendarDate)
+    {
+        calendarDate = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+
+        if (DateOnly.TryParseExact(trimmed, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var isoDate))
+        {
+            calendarDate = isoDate.ToDateTime(TimeOnly.MinValue);
+            return true;
+        }
+
+        var formats = new[]
+        {
+            "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy/MM/dd"
+        };
+
+        if (DateTime.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            calendarDate = ForDateStorage(parsed);
+            return true;
+        }
+
+        if (DateOnly.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fallback))
+        {
+            calendarDate = fallback.ToDateTime(TimeOnly.MinValue);
+            return true;
+        }
+
+        return false;
+    }
 
     public static DateTime ToUtcDate(DateTime philippineCalendarDate)
     {

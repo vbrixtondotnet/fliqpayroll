@@ -19,15 +19,15 @@ public class AttendanceService : IAttendanceService
     }
 
     public Task<IReadOnlyList<AttendanceDto>> GetSheetAsync(DateTime date, CancellationToken cancellationToken = default) =>
-        _attendanceRepository.GetByDateAsync(PhilippineTime.ToPhilippineDate(date), cancellationToken);
+        _attendanceRepository.GetByDateAsync(date, cancellationToken);
 
     public Task<IReadOnlyList<AttendanceDto>> GetByDateRangeAsync(
         DateTime startDate,
         DateTime endDate,
         CancellationToken cancellationToken = default)
     {
-        var phStart = PhilippineTime.ToPhilippineDate(startDate);
-        var phEnd = PhilippineTime.ToPhilippineDate(endDate);
+        var phStart = AttendanceDateHelper.ToCalendarDate(startDate);
+        var phEnd = AttendanceDateHelper.ToCalendarDate(endDate);
 
         if (phEnd < phStart)
         {
@@ -104,7 +104,7 @@ public class AttendanceService : IAttendanceService
         }
 
         var grouped = punches
-            .GroupBy(p => new { p.EmployeeCode, Date = PhilippineTime.ToPhilippineDate(p.Date) })
+            .GroupBy(p => new { p.EmployeeCode, Date = AttendanceDateHelper.ToCalendarDate(p.Date) })
             .ToList();
 
         var processedDays = 0;
@@ -158,8 +158,8 @@ public class AttendanceService : IAttendanceService
         DateTime endDate,
         CancellationToken cancellationToken = default)
     {
-        var phStart = PhilippineTime.ToPhilippineDate(startDate);
-        var phEnd = PhilippineTime.ToPhilippineDate(endDate);
+        var phStart = AttendanceDateHelper.ToCalendarDate(startDate);
+        var phEnd = AttendanceDateHelper.ToCalendarDate(endDate);
 
         if (phEnd < phStart)
         {

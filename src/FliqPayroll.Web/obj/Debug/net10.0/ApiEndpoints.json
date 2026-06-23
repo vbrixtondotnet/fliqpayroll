@@ -9,7 +9,7 @@
     "Parameters": [
       {
         "Name": "date",
-        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "Type": "System.String",
         "IsRequired": false
       }
     ],
@@ -540,12 +540,12 @@
     "Parameters": [
       {
         "Name": "fromDate",
-        "Type": "System.DateTime",
+        "Type": "System.String",
         "IsRequired": false
       },
       {
         "Name": "toDate",
-        "Type": "System.DateTime",
+        "Type": "System.String",
         "IsRequired": false
       }
     ],

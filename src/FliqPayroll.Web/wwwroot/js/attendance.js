@@ -105,8 +105,19 @@
         });
     }
 
+    function getSelectedDateKey() {
+        const input = document.getElementById("attendance-date");
+        return PhTime.dateFromInput(input);
+    }
+
     function loadAttendance() {
-        const date = $("#attendance-date").val();
+        const input = document.getElementById("attendance-date");
+        const date = getSelectedDateKey();
+
+        if (input && input.type === "date") {
+            input.value = date;
+        }
+
         $.getJSON(api.list, { date: date })
             .done(function (response) {
                 if (!response || !response.Success) {

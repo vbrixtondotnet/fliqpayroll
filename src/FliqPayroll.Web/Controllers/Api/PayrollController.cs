@@ -60,21 +60,31 @@ public class PayrollApiController : ControllerBase
 
     public async Task<ActionResult<ApiResult<PayrollByDateRangeDto>>> GetByDateRange(
 
-        [FromQuery] DateTime fromDate,
+        [FromQuery] string? fromDate,
 
-        [FromQuery] DateTime toDate,
+        [FromQuery] string? toDate,
 
         CancellationToken cancellationToken)
 
     {
+
+        if (!PhilippineTime.TryParseCalendarDate(fromDate, out var parsedFromDate) ||
+
+            !PhilippineTime.TryParseCalendarDate(toDate, out var parsedToDate))
+
+        {
+
+            return BadRequest(ApiResult<PayrollByDateRangeDto>.Fail("Invalid date format. Use YYYY-MM-DD."));
+
+        }
 
         try
 
         {
 
             var result = await _payrollService.GetByDateRangeAsync(
-                PhilippineTime.ToPhilippineDate(fromDate),
-                PhilippineTime.ToPhilippineDate(toDate),
+                AttendanceDateHelper.ToCalendarDate(parsedFromDate),
+                AttendanceDateHelper.ToCalendarDate(parsedToDate),
                 cancellationToken);
 
             return Ok(ApiResult<PayrollByDateRangeDto>.Ok(result));

@@ -302,9 +302,12 @@
     }
 
     function getDateRange() {
+        var fromInput = document.getElementById("payroll-v2-from-date");
+        var toInput = document.getElementById("payroll-v2-to-date");
+
         return {
-            fromDate: $("#payroll-v2-from-date").val(),
-            toDate: $("#payroll-v2-to-date").val()
+            fromDate: PhTime.dateFromInput(fromInput),
+            toDate: PhTime.dateFromInput(toInput)
         };
     }
 
@@ -422,12 +425,12 @@
             '" data-hourly-rate="', record.HourlyRate,
             '" data-daily-rate="', dailyRate,
             '" data-base-gross="', record.GrossSalary, '">',
-            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1">', escapeHtml(record.EmployeeName), "</td>",
-            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-2 text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
-            readonlyMoney(isDaily ? null : record.MonthlySalary, "", "payroll-v2-sticky-col-3", "monthlySalary"),
-            readonlyMoney(isDaily ? null : record.BiMonthlySalary, "", "payroll-v2-sticky-col-4", "biMonthlySalary"),
-            readonlyMoney(dailyRate, "", "payroll-v2-sticky-col-5", "dailyRate"),
-            readonlyMoney(record.HourlyRate, "", "payroll-v2-sticky-col-6", "hourlyRate"),
+            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1 payroll-v2-employee-name">', escapeHtml(record.EmployeeName), "</td>",
+            '<td class="text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
+            readonlyMoney(isDaily ? null : record.MonthlySalary, "", "", "monthlySalary"),
+            readonlyMoney(isDaily ? null : record.BiMonthlySalary, "", "", "biMonthlySalary"),
+            readonlyMoney(dailyRate, "", "", "dailyRate"),
+            readonlyMoney(record.HourlyRate, "", "", "hourlyRate"),
             editableInput(record.WorkingDays, "number", "workingDays"),
             editableInput(record.AbsentDays, "number", "absentDays"),
             readonlyMoney(record.AbsentAmount, "", "", "absentAmount"),
@@ -488,7 +491,7 @@
 
         return {
             EmployeeId: getEmployeeId($row),
-            EmployeeName: $row.find(".payroll-v2-sticky-col-1").text().trim(),
+            EmployeeName: $row.find(".payroll-v2-employee-name").text().trim(),
             EmployeeCode: getDataAttr($row, "employee-code"),
             Position: getDataAttr($row, "position"),
             SalaryType: salaryType,
@@ -560,8 +563,8 @@
         });
 
         return {
-            FromDate: $("#payroll-v2-from-date").val(),
-            ToDate: $("#payroll-v2-to-date").val(),
+            FromDate: getDateRange().fromDate,
+            ToDate: getDateRange().toDate,
             PeriodName: currentPeriodName || $("#payroll-v2-period-label").text(),
             Records: records
         };

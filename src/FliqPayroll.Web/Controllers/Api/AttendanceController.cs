@@ -20,12 +20,20 @@ public class AttendanceApiController : ControllerBase
 
     [HttpGet]
     public async Task<ActionResult<ApiResult<IReadOnlyList<AttendanceDto>>>> GetByDate(
-        [FromQuery] DateTime? date,
+        [FromQuery] string? date,
         CancellationToken cancellationToken)
     {
-        var targetDate = date.HasValue
-            ? PhilippineTime.ToPhilippineDate(date.Value)
-            : PhilippineTime.Today;
+        DateTime targetDate;
+        if (string.IsNullOrWhiteSpace(date))
+        {
+            targetDate = PhilippineTime.Today;
+        }
+        else if (!PhilippineTime.TryParseCalendarDate(date, out targetDate))
+        {
+            return BadRequest(ApiResult<IReadOnlyList<AttendanceDto>>.Fail("Invalid date format. Use YYYY-MM-DD."));
+        }
+
+        targetDate = AttendanceDateHelper.ToCalendarDate(targetDate);
         var records = await _attendanceService.GetSheetAsync(targetDate, cancellationToken);
         return Ok(ApiResult<IReadOnlyList<AttendanceDto>>.Ok(records));
     }

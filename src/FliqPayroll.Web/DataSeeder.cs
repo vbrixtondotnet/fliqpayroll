@@ -22,6 +22,8 @@ public static class DataSeeder
 
         await context.Database.MigrateAsync();
 
+        await FixBiometricAttendanceDatesAsync(context, logger);
+
         await SeedRolesAsync(roleManager, logger);
         await SeedUsersAsync(userManager, logger);
 
@@ -164,6 +166,21 @@ public static class DataSeeder
         }
 
         await context.SaveChangesAsync();
+    }
+
+    private static async Task FixBiometricAttendanceDatesAsync(FliqPayrollDbContext context, ILogger logger)
+    {
+        var fixedCount = await context.Database.ExecuteSqlRawAsync("""
+            UPDATE [AttendanceRecords]
+            SET [Date] = DATETIMEFROMPARTS(YEAR([Date]), DAY([Date]), MONTH([Date]), 0, 0, 0, 0)
+            WHERE [IsFromBiometric] = 1
+              AND MONTH([Date]) < DAY([Date]);
+            """);
+
+        if (fixedCount > 0)
+        {
+            logger.LogInformation("Corrected {Count} biometric attendance date(s) parsed with the wrong day/month order.", fixedCount);
+        }
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager, ILogger logger)

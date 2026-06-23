@@ -224,7 +224,6 @@ C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Releas
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\scopedcss\projectbundle\FliqPayroll.Web.bundle.scp.css
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\esqwxcjwth-{0}-61n19gt1b8-61n19gt1b8.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\aaemmbv300-{0}-8b74ncd2d7-8b74ncd2d7.gz
-C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\bbxv4qj8yu-{0}-0lem3lmm0p-0lem3lmm0p.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\ix78i37hg0-{0}-od44bdimdk-od44bdimdk.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\1l1uuzk497-{0}-bqjiyaj88i-bqjiyaj88i.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\68uuw173v7-{0}-c2jlpeoesf-c2jlpeoesf.gz
@@ -313,3 +312,4 @@ C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Releas
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\w4sethjq1b-{0}-g2m06gaj1f-g2m06gaj1f.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\ttzy6ob6ie-{0}-86mh7hshm0-86mh7hshm0.gz
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\7ple2mo02m-{0}-ytuxpcs9d1-ytuxpcs9d1.gz
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\obj\Release\net10.0\compressed\bbxv4qj8yu-{0}-jb95fgek1a-jb95fgek1a.gz
