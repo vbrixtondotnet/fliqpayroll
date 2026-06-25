@@ -1,5 +1,7 @@
 namespace FliqPayroll.Core.DTOs;
 
+using FliqPayroll.Core.Constants;
+
 public class AttendanceDto
 {
     public int Id { get; set; }
@@ -27,6 +29,8 @@ public class AttendanceDto
         IsOvertimeValid && OvertimeIn.HasValue && OvertimeOut.HasValue
             ? Math.Round((decimal)(OvertimeOut.Value - OvertimeIn.Value).TotalHours, 2, MidpointRounding.AwayFromZero)
             : 0m;
+
+    public decimal LateMinutes => AttendanceConstants.CalculateLateMinutes(TimeIn);
 }
 
 public class UpdateAttendanceDto

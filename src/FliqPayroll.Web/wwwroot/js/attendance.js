@@ -4,8 +4,12 @@
     const api = {
         list: "/api/attendance",
         upload: "/api/attendance/upload",
+        employees: "/api/employees",
         update: function (id) { return "/api/attendance/" + id; }
     };
+
+    let allAttendanceRecords = [];
+    let employeeFilterOptions = [];
 
     function showError(message) {
         $("#attendance-success").addClass("d-none");
@@ -15,10 +19,6 @@
     function showSuccess(message) {
         $("#attendance-alert").addClass("d-none");
         $("#attendance-success").removeClass("d-none").text(message);
-    }
-
-    function formatDateInput(date) {
-        return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
     }
 
     function formatTime(value) {
@@ -40,6 +40,17 @@
         }
 
         return hours + ":" + minutes + " " + suffix;
+    }
+
+    function formatRecordDate(value) {
+        if (!value) {
+            return "—";
+        }
+
+        var key = PhTime.parseDateKey(value);
+        var parts = PhTime.partsFromKey(key);
+        var date = new Date(parts.year, parts.month, parts.day);
+        return date.toLocaleDateString("en-PH");
     }
 
     function parseTimeInput(value) {
@@ -70,12 +81,172 @@
         return String(hours).padStart(2, "0") + ":" + minutes + ":" + seconds;
     }
 
+    function getDateRange() {
+        var fromInput = document.getElementById("attendance-from-date");
+        var toInput = document.getElementById("attendance-to-date");
+
+        return {
+            fromDate: PhTime.dateFromInput(fromInput),
+            toDate: PhTime.dateFromInput(toInput)
+        };
+    }
+
+    function setDefaultDates() {
+        $("#attendance-from-date").val(PhTime.formatDateKey(PhTime.startOfMonth()));
+        $("#attendance-to-date").val(PhTime.todayKey());
+    }
+
+    function getSelectedEmployeeId() {
+        const value = $("#attendance-employee-filter-value").val();
+        return value ? parseInt(value, 10) : null;
+    }
+
+    function formatEmployeeLabel(employee) {
+        const name = employee.FullName || [employee.LastName, employee.FirstName].filter(Boolean).join(", ");
+        return employee.EmployeeCode + " - " + name;
+    }
+
+    function buildEmployeeFilterOptions(employees) {
+        return (employees || [])
+            .slice()
+            .sort(function (a, b) {
+                return formatEmployeeLabel(a).localeCompare(formatEmployeeLabel(b));
+            })
+            .map(function (employee) {
+                return {
+                    value: String(employee.Id),
+                    label: formatEmployeeLabel(employee),
+                    searchText: [
+                        employee.EmployeeCode,
+                        employee.FirstName,
+                        employee.LastName,
+                        employee.MiddleName,
+                        employee.FullName
+                    ].filter(Boolean).join(" ").toLowerCase()
+                };
+            });
+    }
+
+    function openEmployeeFilterMenu() {
+        $("#attendance-employee-filter-menu").removeClass("d-none");
+        $("#attendance-employee-filter-input").attr("aria-expanded", "true");
+    }
+
+    function closeEmployeeFilterMenu() {
+        $("#attendance-employee-filter-menu").addClass("d-none");
+        $("#attendance-employee-filter-input").attr("aria-expanded", "false");
+    }
+
+    function renderEmployeeFilterMenu(searchValue) {
+        const $menu = $("#attendance-employee-filter-menu");
+        const query = String(searchValue || "").trim().toLowerCase();
+        $menu.empty();
+
+        const allOption = {
+            value: "",
+            label: "All employees",
+            searchText: "all employees"
+        };
+
+        const matches = [allOption].concat(
+            employeeFilterOptions.filter(function (option) {
+                return !query || option.searchText.indexOf(query) !== -1 || option.label.toLowerCase().indexOf(query) !== -1;
+            })
+        );
+
+        if (matches.length === 1 && query) {
+            $menu.append('<div class="searchable-select-empty">No employees found.</div>');
+            return;
+        }
+
+        matches.forEach(function (option) {
+            const $item = $("<button>", {
+                type: "button",
+                class: "dropdown-item searchable-select-item",
+                text: option.label,
+                "data-value": option.value,
+                role: "option"
+            });
+            $menu.append($item);
+        });
+    }
+
+    function selectEmployeeFilter(optionValue, optionLabel) {
+        $("#attendance-employee-filter-value").val(optionValue || "");
+        $("#attendance-employee-filter-input").val(optionLabel || "");
+        closeEmployeeFilterMenu();
+        applyAttendanceFilter();
+    }
+
+    function clearEmployeeFilter() {
+        selectEmployeeFilter("", "");
+        $("#attendance-employee-filter-input").val("");
+    }
+
+    function applyAttendanceFilter() {
+        const employeeId = getSelectedEmployeeId();
+        const filtered = employeeId
+            ? allAttendanceRecords.filter(function (record) { return record.EmployeeId === employeeId; })
+            : allAttendanceRecords.slice();
+
+        renderRows(filtered);
+    }
+
+    function loadEmployees() {
+        return $.getJSON(api.employees)
+            .done(function (response) {
+                if (!response || !response.Success) {
+                    return;
+                }
+
+                employeeFilterOptions = buildEmployeeFilterOptions(response.Data || []);
+                renderEmployeeFilterMenu($("#attendance-employee-filter-input").val());
+            });
+    }
+
+    function initEmployeeFilter() {
+        const $input = $("#attendance-employee-filter-input");
+        const $menu = $("#attendance-employee-filter-menu");
+
+        $input.on("focus", function () {
+            renderEmployeeFilterMenu($input.val());
+            openEmployeeFilterMenu();
+        });
+
+        $input.on("input", function () {
+            const hadSelection = !!$("#attendance-employee-filter-value").val();
+            $("#attendance-employee-filter-value").val("");
+            renderEmployeeFilterMenu($input.val());
+            openEmployeeFilterMenu();
+            if (hadSelection) {
+                applyAttendanceFilter();
+            }
+        });
+
+        $menu.on("click", ".searchable-select-item", function () {
+            const $item = $(this);
+            selectEmployeeFilter($item.data("value"), $item.text());
+        });
+
+        $("#attendance-employee-clear-btn").on("click", clearEmployeeFilter);
+
+        $(document).on("click", function (event) {
+            if (!$(event.target).closest("#attendance-employee-filter").length) {
+                closeEmployeeFilterMenu();
+            }
+        });
+    }
+
     function renderRows(records) {
         const $body = $("#attendance-body");
         $body.empty();
 
         if (!records || records.length === 0) {
-            $body.append('<tr><td colspan="10" class="text-center text-muted py-4">No attendance records for this date.</td></tr>');
+            const employeeId = getSelectedEmployeeId();
+            const message = employeeId
+                ? "No attendance records for the selected employee in this date range."
+                : "No attendance records for this date range.";
+            $body.append('<tr><td colspan="11" class="text-center text-muted py-4">' + message + '</td></tr>');
             return;
         }
 
@@ -92,6 +263,7 @@
                 '<tr data-id="' + record.Id + '">',
                 "<td>" + record.EmployeeCode + "</td>",
                 "<td>" + record.EmployeeName + bioBadge + "</td>",
+                "<td>" + formatRecordDate(record.Date) + "</td>",
                 '<td><input type="text" class="form-control form-control-sm attendance-time-in" value="' + formatTime(record.TimeIn) + '" placeholder="8:00 AM" /></td>',
                 '<td><input type="text" class="form-control form-control-sm attendance-time-out" value="' + formatTime(record.TimeOut) + '" placeholder="5:00 PM" /></td>',
                 '<td class="attendance-late-display">' + lateBadge + '</td>',
@@ -105,28 +277,43 @@
         });
     }
 
-    function getSelectedDateKey() {
-        const input = document.getElementById("attendance-date");
-        return PhTime.dateFromInput(input);
-    }
-
     function loadAttendance() {
-        const input = document.getElementById("attendance-date");
-        const date = getSelectedDateKey();
+        var range = getDateRange();
 
-        if (input && input.type === "date") {
-            input.value = date;
+        if (!range.fromDate || !range.toDate) {
+            showError("Select both From and To dates.");
+            return;
         }
 
-        $.getJSON(api.list, { date: date })
+        if (range.toDate < range.fromDate) {
+            showError("To date must be on or after From date.");
+            return;
+        }
+
+        hideError();
+        $("#attendance-from-date").val(range.fromDate);
+        $("#attendance-to-date").val(range.toDate);
+
+        $.getJSON(api.list, { fromDate: range.fromDate, toDate: range.toDate })
             .done(function (response) {
                 if (!response || !response.Success) {
                     showError((response && response.Message) || "Unable to load attendance.");
                     return;
                 }
-                renderRows(response.Data);
+                allAttendanceRecords = response.Data || [];
+                applyAttendanceFilter();
             })
-            .fail(function () { showError("Failed to load attendance."); });
+            .fail(function (xhr) {
+                var message = "Failed to load attendance.";
+                if (xhr.responseJSON && xhr.responseJSON.Message) {
+                    message = xhr.responseJSON.Message;
+                }
+                showError(message);
+            });
+    }
+
+    function hideError() {
+        $("#attendance-alert").addClass("d-none").text("");
     }
 
     function saveRow($row) {
@@ -212,8 +399,9 @@
     }
 
     $(function () {
-        $("#attendance-date").val(PhTime.todayKey());
-        loadAttendance();
+        setDefaultDates();
+        initEmployeeFilter();
+        loadEmployees();
 
         $("#attendance-load-btn").on("click", loadAttendance);
         $("#attendance-upload-form").on("submit", uploadCsv);

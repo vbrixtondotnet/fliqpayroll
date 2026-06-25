@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FliqPayroll.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8dc776b22dd8c2cb9f59ff9978fdb31fbbdaa5dd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7d43dfcae09398866bee9a664ccb40d683858c19")]
 [assembly: System.Reflection.AssemblyProductAttribute("FliqPayroll.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FliqPayroll.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,95 @@
+@{
+    ViewData["Title"] = "Leaves";
+}
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Leaves</h1>
+        <p class="text-muted mb-0">Record and review employee sick leave and vacation leave.</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <label for="leaves-from-date" class="form-label mb-0">From</label>
+            <input type="date" id="leaves-from-date" class="form-control" style="width: auto;" />
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <label for="leaves-to-date" class="form-label mb-0">To</label>
+            <input type="date" id="leaves-to-date" class="form-control" style="width: auto;" />
+        </div>
+        <button type="button" id="leaves-load-btn" class="btn btn-primary">Load</button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">New Leave Record</h2>
+        <form id="leaves-form" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="leave-employee-input" class="form-label">Employee</label>
+                <div class="searchable-select" id="leave-employee-select">
+                    <input type="text"
+                           id="leave-employee-input"
+                           class="form-control searchable-select-input"
+                           placeholder="Select employee..."
+                           autocomplete="off"
+                           aria-autocomplete="list"
+                           aria-controls="leave-employee-menu"
+                           aria-expanded="false" />
+                    <input type="hidden" id="leave-employee-value" name="employeeId" value="" />
+                    <div id="leave-employee-menu"
+                         class="searchable-select-menu dropdown-menu w-100 d-none"
+                         role="listbox"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="leave-from-date" class="form-label">From</label>
+                <input type="date" id="leave-from-date" class="form-control" required />
+            </div>
+            <div class="col-md-2">
+                <label for="leave-to-date" class="form-label">To</label>
+                <input type="date" id="leave-to-date" class="form-control" required />
+            </div>
+            <div class="col-md-2">
+                <label for="leave-type" class="form-label">Type</label>
+                <select id="leave-type" class="form-select" required>
+                    <option value="0">Sick Leave</option>
+                    <option value="1">Vacation Leave</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" id="leaves-save-btn" class="btn btn-success w-100">Save Leave</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="leaves-alert" class="alert alert-danger d-none" role="alert"></div>
+<div id="leaves-success" class="alert alert-success d-none" role="alert"></div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle" id="leaves-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Employee</th>
+                        <th style="width: 130px;">From</th>
+                        <th style="width: 130px;">To</th>
+                        <th style="width: 160px;">Type</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="leaves-body">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Select a date range and click Load.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/leaves.js" asp-append-version="true"></script>
+}

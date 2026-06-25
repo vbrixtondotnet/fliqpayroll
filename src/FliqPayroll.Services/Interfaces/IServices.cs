@@ -124,4 +124,11 @@ public interface IHolidayService
 
 }
 
+public interface ILeaveService
+{
+    Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+    Task<LeaveDto> CreateAsync(CreateLeaveDto dto, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+}
+
 

@@ -33,15 +33,16 @@ public static class PayrollCalculator
         EmployeeDto employee,
         IReadOnlyList<AttendanceDto> attendance,
         PayrollPeriodDto period,
-        IReadOnlyList<HolidayDto> holidays)
+        IReadOnlyList<HolidayDto> holidays,
+        IReadOnlyList<LeaveDto> leaves)
     {
         var holidayMap = PayrollHolidayPayCalculator.ToHolidayMap(holidays);
 
         return employee.SalaryType switch
         {
-            SalaryType.Fixed => ComputeFixed(employee, attendance, period, holidayMap),
-            SalaryType.Monthly => ComputeMonthly(employee, attendance, period, holidayMap),
-            _ => ComputeDaily(employee, attendance, period, holidayMap)
+            SalaryType.Fixed => ComputeFixed(employee, attendance, period, holidayMap, leaves),
+            SalaryType.Monthly => ComputeMonthly(employee, attendance, period, holidayMap, leaves),
+            _ => ComputeDaily(employee, attendance, period, holidayMap, leaves)
         };
     }
 
@@ -49,7 +50,8 @@ public static class PayrollCalculator
         EmployeeDto employee,
         IReadOnlyList<AttendanceDto> attendance,
         PayrollPeriodDto period,
-        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate)
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate,
+        IReadOnlyList<LeaveDto> leaves)
     {
         var rates = GetRates(SalaryType.Monthly, employee.BasicSalary);
         var biMonthlyPay = Round(rates.BiMonthly);
@@ -60,7 +62,8 @@ public static class PayrollCalculator
             period.EndDate,
             attendance,
             holidaysByDate,
-            dailyRate);
+            dailyRate,
+            leaves);
 
         var absenceDeduction = Round(dailyRate * metrics.AbsentDays);
         var grossPay = Round(biMonthlyPay + metrics.HolidayPay);
@@ -81,7 +84,8 @@ public static class PayrollCalculator
         EmployeeDto employee,
         IReadOnlyList<AttendanceDto> attendance,
         PayrollPeriodDto period,
-        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate)
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate,
+        IReadOnlyList<LeaveDto> leaves)
     {
         var rates = GetRates(SalaryType.Fixed, employee.BasicSalary);
         var basePay = Round(employee.BasicSalary / 2m);
@@ -92,7 +96,8 @@ public static class PayrollCalculator
             period.EndDate,
             attendance,
             holidaysByDate,
-            dailyRate);
+            dailyRate,
+            leaves);
 
         var grossPay = Round(basePay + metrics.HolidayPay);
 
@@ -112,7 +117,8 @@ public static class PayrollCalculator
         EmployeeDto employee,
         IReadOnlyList<AttendanceDto> attendance,
         PayrollPeriodDto period,
-        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate)
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate,
+        IReadOnlyList<LeaveDto> leaves)
     {
         var rates = GetRates(SalaryType.Daily, employee.BasicSalary);
         var dailyRate = Round(rates.Daily);
@@ -122,7 +128,8 @@ public static class PayrollCalculator
             period.EndDate,
             attendance,
             holidaysByDate,
-            dailyRate);
+            dailyRate,
+            leaves);
 
         var payableAttendance = GetPayableAttendance(attendance);
 
@@ -156,8 +163,10 @@ public static class PayrollCalculator
     {
         var payableAttendance = GetPayableAttendance(attendance);
         var regularOtHours = Round(payableAttendance.Sum(a => a.OvertimeHours));
-        var lateUndertimeHours = Round(attendance.Count(a => a.IsAttendanceValid && a.IsLate));
-        var lateUndertimeAmount = Round(lateUndertimeHours * rates.Hourly);
+        var lateUndertimeMinutes = Round(attendance.Where(a => a.IsAttendanceValid).Sum(a => a.LateMinutes));
+        var lateUndertimeAmount = Round((lateUndertimeMinutes / 60m) * rates.Hourly);
+        var leaveDays = metrics.LeaveDays;
+        var leaveWithPay = Round(rates.Daily * leaveDays);
 
         var monthlySalary = salaryType switch
         {
@@ -188,10 +197,35 @@ public static class PayrollCalculator
             sssCalamityDeduction +
             lateUndertimeAmount);
 
-        var netPay = Round(grossPay - sssDeduction - philHealthDeduction - pagIbigDeduction - sssLoanDeduction - pagIbigLoanDeduction - sssCalamityDeduction - lateUndertimeAmount);
+        var netPay = Round(
+            grossPay +
+            overtimePay +
+            metrics.SpecialHolidayPay +
+            metrics.RegularHolidayPay +
+            leaveWithPay -
+            sssDeduction -
+            philHealthDeduction -
+            pagIbigDeduction -
+            sssLoanDeduction -
+            pagIbigLoanDeduction -
+            sssCalamityDeduction -
+            lateUndertimeAmount);
         if (salaryType == SalaryType.Monthly)
         {
-            netPay = Round(grossPay - absenceDeduction - sssDeduction - philHealthDeduction - pagIbigDeduction - sssLoanDeduction - pagIbigLoanDeduction - sssCalamityDeduction - lateUndertimeAmount);
+            netPay = Round(
+                grossPay +
+                overtimePay +
+                metrics.SpecialHolidayPay +
+                metrics.RegularHolidayPay +
+                leaveWithPay -
+                absenceDeduction -
+                sssDeduction -
+                philHealthDeduction -
+                pagIbigDeduction -
+                sssLoanDeduction -
+                pagIbigLoanDeduction -
+                sssCalamityDeduction -
+                lateUndertimeAmount);
         }
 
         return new PayrollDto
@@ -215,19 +249,22 @@ public static class PayrollCalculator
             RegularOtHours = regularOtHours,
             OvertimePay = overtimePay,
             SpecialOtRate = PayrollConstants.SpecialNonWorkingRate,
-            SpecialOtHours = 0m,
+            SpecialOtHours = Round(metrics.SpecialOtHours),
             SpecialOtPay = metrics.SpecialHolidayPay,
-            HolidayOtRate = PayrollConstants.RegularHolidayRate,
+            HolidayOtRate = metrics.RegularHolidayWorked
+                ? PayrollConstants.RegularHolidayPresentMultiplier
+                : PayrollConstants.RegularHolidayRate,
             HolidayDays = metrics.RegularHolidayDays,
             HolidayOtPay = metrics.RegularHolidayPay,
+            RegularHolidayAbsentCount = metrics.RegularHolidayAbsentCount,
             NightDiffOtRate = 0m,
             NightDiffHours = 0m,
             NightDiffOtPay = 0m,
-            LeaveDays = 0m,
+            LeaveDays = leaveDays,
             HolidayPay = metrics.HolidayPay,
             RegularHolidayPay = metrics.RegularHolidayPay,
             SpecialNonWorkingPay = metrics.SpecialHolidayPay,
-            LeaveWithPay = 0m,
+            LeaveWithPay = leaveWithPay,
             Incentives = 0m,
             Allowances = 0m,
             Bonuses = 0m,
@@ -237,7 +274,7 @@ public static class PayrollCalculator
             GrossPay = grossPay,
             AbsenceDeduction = absenceDeduction,
             LateDeduction = lateUndertimeAmount,
-            LateUndertimeHours = lateUndertimeHours,
+            LateUndertimeHours = lateUndertimeMinutes,
             LateUndertimeAmount = lateUndertimeAmount,
             UndertimeDeduction = 0m,
             CashAdvance = 0m,

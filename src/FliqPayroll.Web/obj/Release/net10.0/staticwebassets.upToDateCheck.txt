@@ -33,6 +33,7 @@ C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\li
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\jquery-validation\dist\jquery.validate.min.js
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\js\bootstrap.esm.min.js.map
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\favicon.ico
+C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\js\leaves.js
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\css\bootstrap-utilities.min.css
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\css\bootstrap-reboot.rtl.min.css
 C:\Users\Windows 11\Documents\FLIQ\FLIQPayroll.v2\src\FliqPayroll.Web\wwwroot\lib\bootstrap\dist\css\bootstrap.min.css
@@ -78,6 +79,7 @@ wwwroot\js\biometrics.js
 wwwroot\js\dashboard.js
 wwwroot\js\employees.js
 wwwroot\js\holiday-calendar.js
+wwwroot\js\leaves.js
 wwwroot\js\payroll-v2.js
 wwwroot\js\payroll.js
 wwwroot\js\payslips.js

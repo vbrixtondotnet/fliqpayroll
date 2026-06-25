@@ -427,6 +427,39 @@ namespace FliqPayroll.Data.Migrations
                     b.ToTable("Holidays");
                 });
 
+            modelBuilder.Entity("FliqPayroll.Data.Entities.LeaveRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LeaveType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "FromDate", "ToDate", "LeaveType");
+
+                    b.ToTable("LeaveRecords");
+                });
+
             modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollPeriod", b =>
                 {
                     b.Property<int>("Id")
@@ -870,6 +903,17 @@ namespace FliqPayroll.Data.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("FliqPayroll.Data.Entities.LeaveRecord", b =>
+                {
+                    b.HasOne("FliqPayroll.Data.Entities.Employee", "Employee")
+                        .WithMany("LeaveRecords")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollRecord", b =>
                 {
                     b.HasOne("FliqPayroll.Data.Entities.Employee", "Employee")
@@ -943,6 +987,8 @@ namespace FliqPayroll.Data.Migrations
             modelBuilder.Entity("FliqPayroll.Data.Entities.Employee", b =>
                 {
                     b.Navigation("AttendanceRecords");
+
+                    b.Navigation("LeaveRecords");
 
                     b.Navigation("PayrollRecords");
                 });

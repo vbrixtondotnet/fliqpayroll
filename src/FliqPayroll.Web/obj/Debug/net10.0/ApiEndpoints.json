@@ -1,14 +1,19 @@
 [
   {
     "ContainingType": "FliqPayroll.Web.Controllers.Api.AttendanceApiController",
-    "Method": "GetByDate",
+    "Method": "GetByDateRange",
     "RelativePath": "api/attendance",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "date",
+        "Name": "fromDate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "toDate",
         "Type": "System.String",
         "IsRequired": false
       }
@@ -58,20 +63,20 @@
   },
   {
     "ContainingType": "FliqPayroll.Web.Controllers.Api.AttendanceApiController",
-    "Method": "GetByDateRange",
+    "Method": "GetByDateRangeLegacy",
     "RelativePath": "api/attendance/range",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "startDate",
-        "Type": "System.DateTime",
+        "Name": "fromDate",
+        "Type": "System.String",
         "IsRequired": false
       },
       {
-        "Name": "endDate",
-        "Type": "System.DateTime",
+        "Name": "toDate",
+        "Type": "System.String",
         "IsRequired": false
       }
     ],
@@ -495,6 +500,89 @@
     "ReturnTypes": [
       {
         "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[FliqPayroll.Core.DTOs.HolidayDto, FliqPayroll.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.LeavesApiController",
+    "Method": "GetByDateRange",
+    "RelativePath": "api/leaves",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "fromDate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "toDate",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[System.Collections.Generic.IReadOnlyList\u00601[[FliqPayroll.Core.DTOs.LeaveDto, FliqPayroll.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.LeavesApiController",
+    "Method": "Create",
+    "RelativePath": "api/leaves",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "FliqPayroll.Core.DTOs.CreateLeaveDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[FliqPayroll.Core.DTOs.LeaveDto, FliqPayroll.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.LeavesApiController",
+    "Method": "Delete",
+    "RelativePath": "api/leaves/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[System.Boolean, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "MediaTypes": [
           "text/plain",
           "application/json",

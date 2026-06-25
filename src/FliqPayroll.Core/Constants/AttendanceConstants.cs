@@ -14,7 +14,30 @@ public static class AttendanceConstants
     /// <summary>Late threshold starts at 8:16 AM Philippine Time (UTC+8).</summary>
     public static readonly TimeSpan LateThreshold = new(8, 16, 0);
 
-    // Biometric export: Column1 (unused), Employee Code, Date, Time, Column5 (ignored), Attendance Code, ...
+    public static bool IsLateTimeIn(TimeSpan? timeIn)
+    {
+        if (!timeIn.HasValue)
+        {
+            return false;
+        }
+
+        return ToClockMinutes(timeIn.Value) > ToClockMinutes(GracePeriodEnd);
+    }
+
+    public static decimal CalculateLateMinutes(TimeSpan? timeIn)
+    {
+        if (!IsLateTimeIn(timeIn))
+        {
+            return 0m;
+        }
+
+        return ToClockMinutes(timeIn!.Value) - ToClockMinutes(WorkStart);
+    }
+
+    private static int ToClockMinutes(TimeSpan time) =>
+        (time.Hours * 60) + time.Minutes;
+
+    // Biometric export:
     public const int CsvColumnEmployeeCode = 1;
     public const int CsvColumnDate = 2;
     public const int CsvColumnTime = 3;

@@ -76,6 +76,15 @@ public interface IHolidayRepository
     Task<bool> ExistsOnDateAsync(DateTime date, int? excludeHolidayId = null, CancellationToken cancellationToken = default);
 }
 
+public interface ILeaveRepository
+{
+    Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
+    Task<LeaveDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<LeaveDto> CreateAsync(CreateLeaveDto dto, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<bool> EmployeeExistsAsync(int employeeId, CancellationToken cancellationToken = default);
+}
+
 public interface IPayrollPeriodRepository
 {
     Task<SavePayrollPeriodResultDto> SaveAsync(SavePayrollPeriodRequestDto request, CancellationToken cancellationToken = default);

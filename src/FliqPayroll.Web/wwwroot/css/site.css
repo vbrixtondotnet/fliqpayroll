@@ -459,6 +459,11 @@ body {
   font-weight: 700;
 }
 
+.payroll-v2-col-sticky-0 {
+  width: 110px;
+  min-width: 110px;
+}
+
 .payroll-v2-col-sticky-1 {
   width: 260px;
   min-width: 260px;
@@ -500,17 +505,34 @@ body {
   background: #f3f5f9 !important;
 }
 
-.payroll-v2-sticky-col-1 {
+.payroll-v2-sticky-col-0 {
   left: 0;
+  min-width: 110px;
+  white-space: nowrap;
+  z-index: 4;
+}
+
+.payroll-v2-sticky-col-1 {
+  left: 110px;
   min-width: 260px;
   white-space: normal;
   box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.12);
+  z-index: 5;
+}
+
+.payroll-v2-table thead .payroll-v2-sticky-col-0 {
+  z-index: 8;
+}
+
+.payroll-v2-table thead .payroll-v2-sticky-col-1 {
+  z-index: 9;
 }
 
 .payroll-v2-table thead .payroll-v2-sticky-col {
   z-index: 8;
 }
 
+.payroll-v2-table tbody .payroll-v2-sticky-col-0,
 .payroll-v2-table tbody .payroll-v2-sticky-col-1,
 .payroll-v2-table tbody .payroll-v2-employee-name {
   font-weight: 600;
@@ -589,6 +611,35 @@ body {
   background: #fff5f5;
 }
 
-.payroll-v2-readonly {
-  background: #f8f9fb;
+.searchable-select {
+  position: relative;
+  max-width: 420px;
+}
+
+.searchable-select-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1050;
+  display: block;
+}
+
+.searchable-select-menu.d-none {
+  display: none !important;
+}
+
+.searchable-select-item.active,
+.searchable-select-item:hover,
+.searchable-select-item:focus {
+  background-color: var(--bs-dropdown-link-hover-bg, #f8f9fa);
+  color: var(--bs-dropdown-link-hover-color, inherit);
+}
+
+.searchable-select-empty {
+  padding: 0.5rem 1rem;
+  color: #6c757d;
+  font-size: 0.875rem;
 }

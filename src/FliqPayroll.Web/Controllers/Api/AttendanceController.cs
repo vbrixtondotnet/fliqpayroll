@@ -19,37 +19,42 @@ public class AttendanceApiController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<AttendanceDto>>>> GetByDate(
-        [FromQuery] string? date,
+    public async Task<ActionResult<ApiResult<IReadOnlyList<AttendanceDto>>>> GetByDateRange(
+        [FromQuery] string? fromDate,
+        [FromQuery] string? toDate,
         CancellationToken cancellationToken)
     {
-        DateTime targetDate;
-        if (string.IsNullOrWhiteSpace(date))
+        if (!PhilippineTime.TryParseCalendarDate(fromDate, out var parsedFromDate) ||
+            !PhilippineTime.TryParseCalendarDate(toDate, out var parsedToDate))
         {
-            targetDate = PhilippineTime.Today;
-        }
-        else if (!PhilippineTime.TryParseCalendarDate(date, out targetDate))
-        {
-            return BadRequest(ApiResult<IReadOnlyList<AttendanceDto>>.Fail("Invalid date format. Use YYYY-MM-DD."));
+            return BadRequest(ApiResult<IReadOnlyList<AttendanceDto>>.Fail("Invalid date format. Use YYYY-MM-DD for From and To."));
         }
 
-        targetDate = AttendanceDateHelper.ToCalendarDate(targetDate);
-        var records = await _attendanceService.GetSheetAsync(targetDate, cancellationToken);
-        return Ok(ApiResult<IReadOnlyList<AttendanceDto>>.Ok(records));
+        var startDate = AttendanceDateHelper.ToCalendarDate(parsedFromDate);
+        var endDate = AttendanceDateHelper.ToCalendarDate(parsedToDate);
+
+        if (endDate < startDate)
+        {
+            return BadRequest(ApiResult<IReadOnlyList<AttendanceDto>>.Fail("To date must be on or after From date."));
+        }
+
+        try
+        {
+            var records = await _attendanceService.GetByDateRangeAsync(startDate, endDate, cancellationToken);
+            return Ok(ApiResult<IReadOnlyList<AttendanceDto>>.Ok(records));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResult<IReadOnlyList<AttendanceDto>>.Fail(ex.Message));
+        }
     }
 
     [HttpGet("range")]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<AttendanceDto>>>> GetByDateRange(
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate,
-        CancellationToken cancellationToken)
-    {
-        var records = await _attendanceService.GetByDateRangeAsync(
-            PhilippineTime.ToPhilippineDate(startDate),
-            PhilippineTime.ToPhilippineDate(endDate),
-            cancellationToken);
-        return Ok(ApiResult<IReadOnlyList<AttendanceDto>>.Ok(records));
-    }
+    public Task<ActionResult<ApiResult<IReadOnlyList<AttendanceDto>>>> GetByDateRangeLegacy(
+        [FromQuery] string? fromDate,
+        [FromQuery] string? toDate,
+        CancellationToken cancellationToken) =>
+        GetByDateRange(fromDate, toDate, cancellationToken);
 
     [HttpPost("upload")]
     [RequestSizeLimit(10 * 1024 * 1024)]

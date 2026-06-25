@@ -4,7 +4,8 @@
     const api = {
         getByDateRange: "/api/payroll/getByDateRange",
         defaultPeriod: "/api/payroll/defaultPeriod",
-        savePeriod: "/api/payroll/savePeriod"
+        savePeriod: "/api/payroll/savePeriod",
+        employees: "/api/employees"
     };
 
     const patterns = {
@@ -17,6 +18,170 @@
     let saveRequest = null;
     let currentPeriodName = "";
     let payrollGenerated = false;
+    let allPayrollRecords = [];
+    let employeeFilterOptions = [];
+
+    function getSelectedEmployeeId() {
+        var value = $("#payroll-v2-employee-filter-value").val();
+        return value ? parseInt(value, 10) : null;
+    }
+
+    function formatEmployeeLabel(employee) {
+        var name = employee.FullName || [employee.LastName, employee.FirstName].filter(Boolean).join(", ");
+        return employee.EmployeeCode + " - " + name;
+    }
+
+    function buildEmployeeFilterOptions(employees) {
+        return (employees || [])
+            .slice()
+            .sort(function (a, b) {
+                return formatEmployeeLabel(a).localeCompare(formatEmployeeLabel(b));
+            })
+            .map(function (employee) {
+                return {
+                    value: String(employee.Id),
+                    label: formatEmployeeLabel(employee),
+                    searchText: [
+                        employee.EmployeeCode,
+                        employee.FirstName,
+                        employee.LastName,
+                        employee.MiddleName,
+                        employee.FullName
+                    ].filter(Boolean).join(" ").toLowerCase()
+                };
+            });
+    }
+
+    function openEmployeeFilterMenu() {
+        $("#payroll-v2-employee-filter-menu").removeClass("d-none");
+        $("#payroll-v2-employee-filter-input").attr("aria-expanded", "true");
+    }
+
+    function closeEmployeeFilterMenu() {
+        $("#payroll-v2-employee-filter-menu").addClass("d-none");
+        $("#payroll-v2-employee-filter-input").attr("aria-expanded", "false");
+    }
+
+    function renderEmployeeFilterMenu(searchValue) {
+        var $menu = $("#payroll-v2-employee-filter-menu");
+        var query = String(searchValue || "").trim().toLowerCase();
+        $menu.empty();
+
+        var allOption = {
+            value: "",
+            label: "All employees",
+            searchText: "all employees"
+        };
+
+        var matches = [allOption].concat(
+            employeeFilterOptions.filter(function (option) {
+                return !query || option.searchText.indexOf(query) !== -1 || option.label.toLowerCase().indexOf(query) !== -1;
+            })
+        );
+
+        if (matches.length === 1 && query) {
+            $menu.append('<div class="searchable-select-empty">No employees found.</div>');
+            return;
+        }
+
+        matches.forEach(function (option) {
+            var $item = $("<button>", {
+                type: "button",
+                class: "dropdown-item searchable-select-item",
+                text: option.label,
+                "data-value": option.value,
+                role: "option"
+            });
+            $menu.append($item);
+        });
+    }
+
+    function selectEmployeeFilter(optionValue, optionLabel) {
+        $("#payroll-v2-employee-filter-value").val(optionValue || "");
+        $("#payroll-v2-employee-filter-input").val(optionLabel || "");
+        closeEmployeeFilterMenu();
+        applyPayrollFilter();
+    }
+
+    function clearEmployeeFilter() {
+        selectEmployeeFilter("", "");
+        $("#payroll-v2-employee-filter-input").val("");
+    }
+
+    function applyPayrollFilter() {
+        var employeeId = getSelectedEmployeeId();
+        var visibleCount = 0;
+
+        $("#payroll-v2-body tr").each(function () {
+            var $row = $(this);
+            var rowEmployeeId = getEmployeeId($row);
+
+            if (!rowEmployeeId) {
+                return;
+            }
+
+            var show = !employeeId || rowEmployeeId === employeeId;
+            $row.toggleClass("d-none", !show);
+
+            if (show) {
+                visibleCount++;
+            }
+        });
+
+        $("#payroll-v2-filter-empty-row").remove();
+
+        if (employeeId && payrollGenerated && visibleCount === 0) {
+            $("#payroll-v2-body").append(
+                '<tr id="payroll-v2-filter-empty-row"><td colspan="37" class="text-center text-muted py-4">No payroll records for the selected employee.</td></tr>'
+            );
+        }
+    }
+
+    function loadEmployees() {
+        return $.getJSON(api.employees)
+            .done(function (response) {
+                if (!response || !response.Success) {
+                    return;
+                }
+
+                employeeFilterOptions = buildEmployeeFilterOptions(response.Data || []);
+                renderEmployeeFilterMenu($("#payroll-v2-employee-filter-input").val());
+            });
+    }
+
+    function initEmployeeFilter() {
+        var $input = $("#payroll-v2-employee-filter-input");
+        var $menu = $("#payroll-v2-employee-filter-menu");
+
+        $input.on("focus", function () {
+            renderEmployeeFilterMenu($input.val());
+            openEmployeeFilterMenu();
+        });
+
+        $input.on("input", function () {
+            var hadSelection = !!$("#payroll-v2-employee-filter-value").val();
+            $("#payroll-v2-employee-filter-value").val("");
+            renderEmployeeFilterMenu($input.val());
+            openEmployeeFilterMenu();
+
+            if (hadSelection) {
+                applyPayrollFilter();
+            }
+        });
+
+        $menu.on("click", ".searchable-select-item", function () {
+            var $item = $(this);
+            selectEmployeeFilter($item.data("value"), $item.text());
+        });
+
+        $("#payroll-v2-employee-clear-btn").on("click", clearEmployeeFilter);
+
+        $(document).on("click", function (event) {
+            if (!$(event.target).closest("#payroll-v2-employee-filter").length) {
+                closeEmployeeFilterMenu();
+            }
+        });
+    }
 
     function sanitizeInput(value) {
         return String(value || "").trim().replace(/,/g, "");
@@ -164,6 +329,36 @@
         }
     }
 
+    function calculateSpecialNonWorkingPay(dailyRate, hoursWorked, rate) {
+        var fullDayPay = dailyRate * rate;
+        if (hoursWorked >= 8) {
+            return fullDayPay;
+        }
+
+        return ((dailyRate * rate) / 8) * hoursWorked;
+    }
+
+    function calculateRegularHolidayPay(dailyRate, holidayDays, rate, absentHolidayDays) {
+        absentHolidayDays = absentHolidayDays || 0;
+        var absentPay = dailyRate * absentHolidayDays;
+
+        if (rate <= 1) {
+            return absentPay;
+        }
+
+        var workedDays = Math.max(0, holidayDays - absentHolidayDays);
+        var hours = workedDays * 8;
+        if (hours <= 0) {
+            return absentPay;
+        }
+
+        if (hours >= 8) {
+            return absentPay + dailyRate * rate;
+        }
+
+        return absentPay + ((dailyRate * rate) / 8) * hours;
+    }
+
     function recalculateRow($row) {
         if ($row.length === 0 || $row.attr("id") === "payroll-v2-empty-row") {
             return;
@@ -186,14 +381,19 @@
 
         var regularOtPay = roundMoney(
             getFieldValue($row, "regularOtHours") * hourlyRate * getFieldValue($row, "regularOtRate"));
-        var specialOtPay = roundMoney(
-            getFieldValue($row, "specialOtHours") * hourlyRate * getFieldValue($row, "specialOtRate"));
-        var holidayOtPay = roundMoney(
-            getFieldValue($row, "holidayDays") * dailyRate * getFieldValue($row, "holidayOtRate"));
+        var specialOtPay = roundMoney(calculateSpecialNonWorkingPay(
+            dailyRate,
+            getFieldValue($row, "specialOtHours"),
+            getFieldValue($row, "specialOtRate")));
+        var holidayOtPay = roundMoney(calculateRegularHolidayPay(
+            dailyRate,
+            getFieldValue($row, "holidayDays"),
+            getFieldValue($row, "holidayOtRate"),
+            parseFloat($row.data("regular-holiday-absent-count")) || 0));
         var nightDiffOtPay = roundMoney(
             getFieldValue($row, "nightDiffHours") * hourlyRate * getFieldValue($row, "nightDiffOtRate"));
         var leavePay = roundMoney(getFieldValue($row, "leaveDays") * dailyRate);
-        var lateUndertimeAmount = roundMoney(getFieldValue($row, "lateUndertimeHours") * hourlyRate);
+        var lateUndertimeAmount = roundMoney((getFieldValue($row, "lateUndertimeHours") / 60) * hourlyRate);
 
         setFieldValue($row, "regularOtPay", regularOtPay, "money");
         setFieldValue($row, "specialOtPay", specialOtPay, "money");
@@ -424,7 +624,9 @@
             '" data-salary-type="', record.SalaryType,
             '" data-hourly-rate="', record.HourlyRate,
             '" data-daily-rate="', dailyRate,
-            '" data-base-gross="', record.GrossSalary, '">',
+            '" data-base-gross="', record.GrossSalary,
+            '" data-regular-holiday-absent-count="', record.RegularHolidayAbsentCount || 0, '">',
+            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-0 payroll-v2-employee-code">', escapeHtml(record.EmployeeCode), "</td>",
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1 payroll-v2-employee-name">', escapeHtml(record.EmployeeName), "</td>",
             '<td class="text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
             readonlyMoney(isDaily ? null : record.MonthlySalary, "", "", "monthlySalary"),
@@ -492,7 +694,7 @@
         return {
             EmployeeId: getEmployeeId($row),
             EmployeeName: $row.find(".payroll-v2-employee-name").text().trim(),
-            EmployeeCode: getDataAttr($row, "employee-code"),
+            EmployeeCode: $row.find(".payroll-v2-employee-code").text().trim() || getDataAttr($row, "employee-code"),
             Position: getDataAttr($row, "position"),
             SalaryType: salaryType,
             BasicSalary: parseFloat($row.data("basic-salary")) || 0,
@@ -577,13 +779,19 @@
         setSaveButtonVisible(false);
 
         if (!records || records.length === 0) {
-            $body.append('<tr><td colspan="36" class="text-center text-muted py-4">No payroll records for this period.</td></tr>');
+            $body.append('<tr><td colspan="37" class="text-center text-muted py-4">No payroll records for this period.</td></tr>');
             return;
         }
 
         records.forEach(function (record) {
             $body.append(renderRow(record));
         });
+
+        $body.find("tr").each(function () {
+            recalculateRow($(this));
+        });
+
+        applyPayrollFilter();
 
         payrollGenerated = true;
         setSaveButtonVisible(true);
@@ -656,7 +864,8 @@
                 currentPeriodName = periodName;
                 $("#payroll-v2-period-label").text(periodName);
                 updatePeriodInfo(periodName);
-                renderRows(response.Data.Records);
+                allPayrollRecords = response.Data.Records || [];
+                renderRows(allPayrollRecords);
             })
             .fail(function (xhr) {
                 if (xhr.statusText === "abort") {
@@ -733,5 +942,7 @@
     $(function () {
         bindValidation();
         bindPeriodControls();
+        initEmployeeFilter();
+        loadEmployees();
     });
 })(jQuery);

@@ -44,7 +44,7 @@ public static class AttendancePolicyProcessor
             return null;
         }
 
-        var isLate = timeIn.HasValue && timeIn.Value >= AttendanceConstants.LateThreshold;
+        var isLate = AttendanceConstants.IsLateTimeIn(timeIn);
 
         var hasOtIn = punches.Any(p => p.AttendanceCode == AttendanceConstants.CodeOvertimeIn);
         var hasOtOut = punches.Any(p => p.AttendanceCode == AttendanceConstants.CodeOvertimeOut);

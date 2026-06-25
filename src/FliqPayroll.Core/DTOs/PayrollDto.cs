@@ -27,6 +27,7 @@ public class PayrollDto
     public decimal HolidayOtRate { get; set; }
     public decimal HolidayDays { get; set; }
     public decimal HolidayOtPay { get; set; }
+    public int RegularHolidayAbsentCount { get; set; }
     public decimal NightDiffOtRate { get; set; }
     public decimal NightDiffHours { get; set; }
     public decimal NightDiffOtPay { get; set; }

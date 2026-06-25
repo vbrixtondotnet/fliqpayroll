@@ -33,6 +33,7 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<Holiday> Holidays => Set<Holiday>();
+    public DbSet<LeaveRecord> LeaveRecords => Set<LeaveRecord>();
     public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
     public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
 
@@ -159,6 +160,16 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.HolidayId);
             entity.HasIndex(e => e.Date).IsUnique();
             entity.Property(e => e.Description).HasMaxLength(200).IsRequired();
+        });
+
+        modelBuilder.Entity<LeaveRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.EmployeeId, e.FromDate, e.ToDate, e.LeaveType });
+            entity.HasOne(e => e.Employee)
+                .WithMany(e => e.LeaveRecords)
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PayrollPeriod>(entity =>

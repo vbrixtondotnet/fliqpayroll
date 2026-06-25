@@ -10,17 +10,20 @@ public class PayrollService : IPayrollService
     private readonly IEmployeeRepository _employeeRepository;
     private readonly IAttendanceRepository _attendanceRepository;
     private readonly IHolidayRepository _holidayRepository;
+    private readonly ILeaveRepository _leaveRepository;
     private readonly IPayrollPeriodRepository _payrollPeriodRepository;
 
     public PayrollService(
         IEmployeeRepository employeeRepository,
         IAttendanceRepository attendanceRepository,
         IHolidayRepository holidayRepository,
+        ILeaveRepository leaveRepository,
         IPayrollPeriodRepository payrollPeriodRepository)
     {
         _employeeRepository = Guard.AgainstNull(employeeRepository, nameof(employeeRepository));
         _attendanceRepository = Guard.AgainstNull(attendanceRepository, nameof(attendanceRepository));
         _holidayRepository = Guard.AgainstNull(holidayRepository, nameof(holidayRepository));
+        _leaveRepository = Guard.AgainstNull(leaveRepository, nameof(leaveRepository));
         _payrollPeriodRepository = Guard.AgainstNull(payrollPeriodRepository, nameof(payrollPeriodRepository));
     }
 
@@ -67,6 +70,15 @@ public class PayrollService : IPayrollService
             period.EndDate,
             cancellationToken);
 
+        var leaves = await _leaveRepository.GetByDateRangeAsync(
+            period.StartDate,
+            period.EndDate,
+            cancellationToken);
+
+        var leavesByEmployee = leaves
+            .GroupBy(l => l.EmployeeId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<LeaveDto>)g.ToList());
+
         var results = new List<PayrollDto>();
 
         foreach (var employee in targetEmployees)
@@ -77,7 +89,10 @@ public class PayrollService : IPayrollService
                 period.EndDate,
                 cancellationToken);
 
-            results.Add(PayrollCalculator.Compute(employee, attendance, period, holidays));
+            leavesByEmployee.TryGetValue(employee.Id, out var employeeLeaves);
+            employeeLeaves ??= Array.Empty<LeaveDto>();
+
+            results.Add(PayrollCalculator.Compute(employee, attendance, period, holidays, employeeLeaves));
         }
 
         return results;
