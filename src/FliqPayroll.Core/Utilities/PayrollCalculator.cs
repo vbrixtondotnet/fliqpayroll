@@ -74,6 +74,7 @@ public static class PayrollCalculator
             rates,
             metrics,
             attendance,
+            holidaysByDate,
             biMonthlyPay,
             0m,
             grossPay,
@@ -107,6 +108,7 @@ public static class PayrollCalculator
             rates,
             metrics,
             attendance,
+            holidaysByDate,
             basePay,
             0m,
             grossPay,
@@ -144,6 +146,7 @@ public static class PayrollCalculator
             rates,
             metrics,
             attendance,
+            holidaysByDate,
             basicPay,
             overtimePay,
             grossPay,
@@ -156,6 +159,7 @@ public static class PayrollCalculator
         (decimal BiMonthly, decimal Daily, decimal Hourly) rates,
         PayrollHolidayPayCalculator.Result metrics,
         IReadOnlyList<AttendanceDto> attendance,
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate,
         decimal basicPayAmount,
         decimal overtimePay,
         decimal grossPay,
@@ -163,7 +167,8 @@ public static class PayrollCalculator
     {
         var payableAttendance = GetPayableAttendance(attendance);
         var regularOtHours = Round(payableAttendance.Sum(a => a.OvertimeHours));
-        var lateUndertimeMinutes = Round(attendance.Where(a => a.IsAttendanceValid).Sum(a => a.LateMinutes));
+        var lateUndertimeMinutes = Round(
+            GetLateUndertimeAttendance(attendance, holidaysByDate).Sum(a => a.LateMinutes));
         var lateUndertimeAmount = Round((lateUndertimeMinutes / 60m) * rates.Hourly);
         var leaveDays = metrics.LeaveDays;
         var leaveWithPay = Round(rates.Daily * leaveDays);
@@ -295,6 +300,25 @@ public static class PayrollCalculator
 
     private static IEnumerable<AttendanceDto> GetPayableAttendance(IReadOnlyList<AttendanceDto> attendance) =>
         attendance.Where(a => a.IsAttendanceValid && !PhilippineTime.IsSunday(a.Date));
+
+    private static IEnumerable<AttendanceDto> GetLateUndertimeAttendance(
+        IReadOnlyList<AttendanceDto> attendance,
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate) =>
+        attendance.Where(a => a.IsAttendanceValid && !IsLateUndertimeExcludedDay(a.Date, holidaysByDate));
+
+    private static bool IsLateUndertimeExcludedDay(
+        DateTime date,
+        IReadOnlyDictionary<DateTime, HolidayDto> holidaysByDate)
+    {
+        var calendarDate = PhilippineTime.ToPhilippineDate(date);
+
+        if (PhilippineTime.IsSunday(calendarDate))
+        {
+            return true;
+        }
+
+        return holidaysByDate.ContainsKey(calendarDate);
+    }
 
     private static decimal Round(decimal value) =>
         Math.Round(value, 2, MidpointRounding.AwayFromZero);
