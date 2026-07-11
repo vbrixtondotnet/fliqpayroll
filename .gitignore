@@ -198,3 +198,14 @@
 /src/FliqPayroll.Web/obj/Release/net10.0/staticwebassets.build.json.cache
 /src/FliqPayroll.Web/obj/Release/net10.0/staticwebassets.publish.endpoints.json
 /src/FliqPayroll.Web/obj/Release/net10.0/staticwebassets.publish.json
+/src/FliqPayroll.Services/bin/Debug/net10.0/FliqPayroll.Services.deps.json
+/src/FliqPayroll.Web/bin/Debug/net10.0/ClosedXML.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/ClosedXML.Parser.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/DocumentFormat.OpenXml.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/DocumentFormat.OpenXml.Framework.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/ExcelNumberFormat.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/FliqPayroll.Web.deps.json
+/src/FliqPayroll.Web/bin/Debug/net10.0/RBush.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/SixLabors.Fonts.dll
+/src/FliqPayroll.Web/bin/Debug/net10.0/System.IO.Packaging.dll
+/src/FliqPayroll.Web/bin/Release/net10.0/FliqPayroll.Web.staticwebassets.runtime.json
