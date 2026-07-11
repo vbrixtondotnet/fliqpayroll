@@ -16,6 +16,7 @@ public class PayrollDto
     public decimal HourlyRate { get; set; }
     public decimal WorkingDays { get; set; }
     public decimal AbsentDays { get; set; }
+    public IReadOnlyList<string> AbsentDates { get; set; } = [];
     public decimal AbsentAmount { get; set; }
     public decimal BasicPayAmount { get; set; }
     public decimal GrossSalary { get; set; }

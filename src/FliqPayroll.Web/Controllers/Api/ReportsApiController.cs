@@ -203,9 +203,7 @@ public class ReportsApiController : ControllerBase
 
 
         var pdf = _payslipPdfService.Generate(payslip);
-
-        var fileName = $"Payslip_{payslip.Employee.EmployeeCode}_{payslip.Period.Name.Replace(" ", "_")}.pdf";
-
+        var fileName = PayslipPdfService.BuildSinglePayslipFileName(payslip);
         return File(pdf, "application/pdf", fileName);
 
     }
@@ -224,8 +222,7 @@ public class ReportsApiController : ControllerBase
             }
 
             var pdf = _payslipPdfService.GenerateAll(payslips);
-            var periodName = payslips[0].Period.Name.Replace(" ", "_");
-            var fileName = $"Payslips_{periodName}.pdf";
+            var fileName = PayslipPdfService.BuildAllPayslipsFileName(payslips[0].Period);
             return File(pdf, "application/pdf", fileName);
         }
         catch (ArgumentException ex)

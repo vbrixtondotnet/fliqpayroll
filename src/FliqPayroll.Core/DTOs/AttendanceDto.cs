@@ -1,6 +1,7 @@
 namespace FliqPayroll.Core.DTOs;
 
 using FliqPayroll.Core.Constants;
+using FliqPayroll.Core.Utilities;
 
 public class AttendanceDto
 {
@@ -18,19 +19,28 @@ public class AttendanceDto
     public bool IsFromBiometric { get; set; }
     public string? Notes { get; set; }
 
-    public bool IsAttendanceValid => TimeIn.HasValue && TimeOut.HasValue;
+    /// <summary>
+    /// Present when Time In + Time Out exist, or Time In + complete Overtime In/Out (OT Out alone is ignored).
+    /// </summary>
+    public bool IsAttendanceValid =>
+        AttendancePolicyProcessor.IsPresent(TimeIn, TimeOut, OvertimeIn, OvertimeOut);
 
     public decimal HoursWorked =>
-        IsAttendanceValid && TimeIn.HasValue && TimeOut.HasValue
-            ? Math.Max(0m, Math.Round((decimal)(TimeOut.Value - TimeIn.Value).TotalHours, 2, MidpointRounding.AwayFromZero))
+        AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
+            TimeIn, TimeOut, OvertimeIn, OvertimeOut, out var effectiveIn, out var effectiveOut)
+            ? Math.Max(0m, Math.Round((decimal)(effectiveOut - effectiveIn).TotalHours, 2, MidpointRounding.AwayFromZero))
             : 0m;
 
     public decimal OvertimeHours =>
-        IsOvertimeValid && OvertimeIn.HasValue && OvertimeOut.HasValue
-            ? Math.Round((decimal)(OvertimeOut.Value - OvertimeIn.Value).TotalHours, 2, MidpointRounding.AwayFromZero)
+        AttendancePolicyProcessor.HasValidOvertime(OvertimeIn, OvertimeOut)
+            ? Math.Round((decimal)(OvertimeOut!.Value - OvertimeIn!.Value).TotalHours, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
-    public decimal LateMinutes => AttendanceConstants.CalculateLateMinutes(TimeIn);
+    public decimal LateMinutes =>
+        AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
+            TimeIn, TimeOut, OvertimeIn, OvertimeOut, out var effectiveIn, out _)
+            ? AttendanceConstants.CalculateLateMinutes(effectiveIn)
+            : AttendanceConstants.CalculateLateMinutes(TimeIn);
 }
 
 public class UpdateAttendanceDto

@@ -86,9 +86,12 @@ public static class PhilippineTime
             return true;
         }
 
+        // Prefer day/month (Philippine biometric exports) before month/day to avoid ambiguous dates like 11/6/2026.
         var formats = new[]
         {
-            "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy/MM/dd"
+            "dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy", "d/M/yy",
+            "MM/dd/yyyy", "M/d/yyyy", "MM/dd/yy", "M/d/yy",
+            "yyyy/MM/dd", "yyyyMMdd", "MM-dd-yyyy", "M-d-yyyy"
         };
 
         if (DateTime.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
@@ -97,7 +100,8 @@ public static class PhilippineTime
             return true;
         }
 
-        if (DateOnly.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fallback))
+        var philippineCulture = CultureInfo.GetCultureInfo("en-PH");
+        if (DateOnly.TryParse(trimmed, philippineCulture, DateTimeStyles.None, out var fallback))
         {
             calendarDate = fallback.ToDateTime(TimeOnly.MinValue);
             return true;

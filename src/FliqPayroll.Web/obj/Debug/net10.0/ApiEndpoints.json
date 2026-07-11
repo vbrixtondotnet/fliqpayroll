@@ -620,6 +620,69 @@
   },
   {
     "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/payroll/export/csv",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "from",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "to",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
+    "Method": "ExportExcel",
+    "RelativePath": "api/payroll/export/excel",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "from",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "to",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
+    "Method": "ExportPdf",
+    "RelativePath": "api/payroll/export/pdf",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "from",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "to",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.PayrollApiController",
     "Method": "GetByDateRange",
     "RelativePath": "api/payroll/getByDateRange",
     "HttpMethod": "GET",

@@ -52,6 +52,16 @@
     </div>
     <span class="ms-2 text-muted">Calculating payroll...</span>
 </div>
+
+<div id="payroll-v2-export-toolbar" class="d-none mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="text-muted me-1">Export:</span>
+        <a id="payroll-v2-export-excel" class="btn btn-outline-success btn-sm" href="#">Export to Excel</a>
+        <a id="payroll-v2-export-csv" class="btn btn-outline-secondary btn-sm" href="#">Export to CSV</a>
+        <a id="payroll-v2-export-pdf" class="btn btn-outline-danger btn-sm" href="#">Export to PDF</a>
+    </div>
+</div>
+
 <div class="card payroll-v2-card">
     <div class="card-body p-0">
         <div class="payroll-v2-table-wrap">
@@ -130,6 +140,21 @@
                         <td colspan="37" class="text-center text-muted py-4">Select a payroll period and click Generate Payroll.</td>
                     </tr>
                 </tbody>            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payroll-v2-absent-modal" tabindex="-1" aria-labelledby="payroll-v2-absent-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payroll-v2-absent-modal-label">Absent Dates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="payroll-v2-absent-employee" class="fw-semibold mb-3"></p>
+                <ul id="payroll-v2-absent-dates-list" class="list-unstyled mb-0 payroll-v2-absent-dates-list"></ul>
+            </div>
         </div>
     </div>
 </div>

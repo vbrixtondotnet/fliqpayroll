@@ -1,11 +1,8 @@
+using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
-
 using FliqPayroll.Core.Interfaces;
-
 using FliqPayroll.Core.Utilities;
-
 using FliqPayroll.Data.Entities;
-
 using Microsoft.EntityFrameworkCore;
 
 
@@ -362,38 +359,42 @@ public class AttendanceRepository : IAttendanceRepository
 
 
 
-    private static AttendanceDto MapToDto(AttendanceRecord entity) => new()
-
+    private static AttendanceDto MapToDto(AttendanceRecord entity)
     {
+        var hasValidOvertime = AttendancePolicyProcessor.HasValidOvertime(entity.OvertimeIn, entity.OvertimeOut);
+        var timeIn = entity.TimeIn;
+        var timeOut = entity.TimeOut;
 
-        Id = entity.Id,
+        // Scenario 2 legacy rows: expose First/Last Bio as Time In/Out for Payroll and Attendance pages.
+        if (AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
+                entity.TimeIn,
+                entity.TimeOut,
+                hasValidOvertime ? entity.OvertimeIn : null,
+                hasValidOvertime ? entity.OvertimeOut : null,
+                out var effectiveIn,
+                out var effectiveOut))
+        {
+            timeIn = effectiveIn;
+            timeOut = effectiveOut;
+        }
 
-        EmployeeId = entity.EmployeeId,
-
-        EmployeeName = $"{entity.Employee.FirstName} {entity.Employee.LastName}",
-
-        EmployeeCode = entity.Employee.EmployeeCode,
-
-        Date = AttendanceDateHelper.ToCalendarDate(entity.Date),
-
-        TimeIn = entity.TimeIn,
-
-        TimeOut = entity.TimeOut,
-
-        IsLate = entity.IsLate,
-
-        OvertimeIn = entity.OvertimeIn,
-
-        OvertimeOut = entity.OvertimeOut,
-
-        IsOvertimeValid = entity.IsOvertimeValid,
-
-        IsFromBiometric = entity.IsFromBiometric,
-
-        Notes = entity.Notes
-
-    };
-
+        return new AttendanceDto
+        {
+            Id = entity.Id,
+            EmployeeId = entity.EmployeeId,
+            EmployeeName = $"{entity.Employee.FirstName} {entity.Employee.LastName}",
+            EmployeeCode = entity.Employee.EmployeeCode,
+            Date = AttendanceDateHelper.ToCalendarDate(entity.Date),
+            TimeIn = timeIn,
+            TimeOut = timeOut,
+            IsLate = AttendanceConstants.IsLateTimeIn(timeIn),
+            OvertimeIn = hasValidOvertime ? entity.OvertimeIn : null,
+            OvertimeOut = hasValidOvertime ? entity.OvertimeOut : null,
+            IsOvertimeValid = hasValidOvertime,
+            IsFromBiometric = entity.IsFromBiometric,
+            Notes = entity.Notes
+        };
+    }
 }
 
 

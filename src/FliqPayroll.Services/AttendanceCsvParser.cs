@@ -135,30 +135,8 @@ internal static class AttendanceCsvParser
                columns[0].Equals("Column1", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool TryParseDate(string value, out DateTime date)
-    {
-        var trimmed = value.Trim();
-        var formats = new[]
-        {
-            "MM/dd/yyyy", "M/d/yyyy", "MM/dd/yy", "M/d/yy",
-            "dd/MM/yyyy", "d/M/yyyy",
-            "yyyy-MM-dd", "yyyy/MM/dd", "yyyyMMdd", "MM-dd-yyyy", "M-d-yyyy"
-        };
-
-        if (DateTime.TryParseExact(trimmed, formats, BiometricDateCulture, DateTimeStyles.None, out date))
-        {
-            date = PhilippineTime.ForDateStorage(date);
-            return true;
-        }
-
-        if (DateTime.TryParse(trimmed, BiometricDateCulture, DateTimeStyles.None, out date))
-        {
-            date = PhilippineTime.ForDateStorage(date);
-            return true;
-        }
-
-        return false;
-    }
+    private static bool TryParseDate(string value, out DateTime date) =>
+        PhilippineTime.TryParseCalendarDate(value, out date);
 
     private static bool TryParseTime(string value, out TimeSpan time)
     {

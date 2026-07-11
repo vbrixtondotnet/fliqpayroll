@@ -40,6 +40,7 @@ public class AttendanceService : IAttendanceService
     public Task<AttendanceDto?> UpdateAsync(UpdateAttendanceDto dto, CancellationToken cancellationToken = default)
     {
         Guard.AgainstNull(dto, nameof(dto));
+        AttendancePolicyProcessor.NormalizeManualAttendance(dto);
         return _attendanceRepository.UpdateAsync(dto, cancellationToken);
     }
 

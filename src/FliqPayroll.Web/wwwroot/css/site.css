@@ -611,6 +611,21 @@ body {
   background: #fff5f5;
 }
 
+.payroll-v2-absent-link {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.payroll-v2-absent-dates-list li {
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #eef1f7;
+}
+
+.payroll-v2-absent-dates-list li:last-child {
+  border-bottom: none;
+}
+
 .searchable-select {
   position: relative;
   max-width: 420px;

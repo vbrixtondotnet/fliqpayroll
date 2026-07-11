@@ -1,3 +1,4 @@
+using System.Globalization;
 using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Enums;
@@ -89,10 +90,11 @@ public static class PayrollCalculator
         IReadOnlyList<LeaveDto> leaves)
     {
         var rates = GetRates(SalaryType.Fixed, employee.BasicSalary);
+        // Fixed cutoff pay is always BasicSalary / 2 — no additional holiday pay.
         var basePay = Round(employee.BasicSalary / 2m);
         var dailyRate = Round(rates.Daily);
 
-        var metrics = PayrollHolidayPayCalculator.Calculate(
+        var attendanceMetrics = PayrollHolidayPayCalculator.Calculate(
             period.StartDate,
             period.EndDate,
             attendance,
@@ -100,7 +102,7 @@ public static class PayrollCalculator
             dailyRate,
             leaves);
 
-        var grossPay = Round(basePay + metrics.HolidayPay);
+        var metrics = WithoutHolidayPay(attendanceMetrics);
 
         return BuildPayrollDto(
             employee,
@@ -111,7 +113,7 @@ public static class PayrollCalculator
             holidaysByDate,
             basePay,
             0m,
-            grossPay,
+            basePay,
             0m);
     }
 
@@ -202,11 +204,19 @@ public static class PayrollCalculator
             sssCalamityDeduction +
             lateUndertimeAmount);
 
+        // Fixed employees never receive holiday pay; Daily/Monthly keep existing rules.
+        var regularHolidayPay = salaryType == SalaryType.Fixed ? 0m : metrics.RegularHolidayPay;
+        var specialHolidayPay = salaryType == SalaryType.Fixed ? 0m : metrics.SpecialHolidayPay;
+        var holidayPay = salaryType == SalaryType.Fixed ? 0m : metrics.HolidayPay;
+        var specialOtHours = salaryType == SalaryType.Fixed ? 0m : Round(metrics.SpecialOtHours);
+        var holidayDays = salaryType == SalaryType.Fixed ? 0m : metrics.RegularHolidayDays;
+        var regularHolidayAbsentCount = salaryType == SalaryType.Fixed ? 0 : metrics.RegularHolidayAbsentCount;
+
         var netPay = Round(
             grossPay +
             overtimePay +
-            metrics.SpecialHolidayPay +
-            metrics.RegularHolidayPay +
+            specialHolidayPay +
+            regularHolidayPay +
             leaveWithPay -
             sssDeduction -
             philHealthDeduction -
@@ -220,8 +230,8 @@ public static class PayrollCalculator
             netPay = Round(
                 grossPay +
                 overtimePay +
-                metrics.SpecialHolidayPay +
-                metrics.RegularHolidayPay +
+                specialHolidayPay +
+                regularHolidayPay +
                 leaveWithPay -
                 absenceDeduction -
                 sssDeduction -
@@ -247,6 +257,9 @@ public static class PayrollCalculator
             HourlyRate = Round(rates.Hourly),
             WorkingDays = metrics.WorkingDays,
             AbsentDays = metrics.AbsentDays,
+            AbsentDates = metrics.AbsentDates
+                .Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+                .ToList(),
             AbsentAmount = absentAmount,
             BasicPayAmount = basicPayAmount,
             GrossSalary = basicPayAmount,
@@ -254,21 +267,21 @@ public static class PayrollCalculator
             RegularOtHours = regularOtHours,
             OvertimePay = overtimePay,
             SpecialOtRate = PayrollConstants.SpecialNonWorkingRate,
-            SpecialOtHours = Round(metrics.SpecialOtHours),
-            SpecialOtPay = metrics.SpecialHolidayPay,
+            SpecialOtHours = specialOtHours,
+            SpecialOtPay = specialHolidayPay,
             HolidayOtRate = metrics.RegularHolidayWorked
                 ? PayrollConstants.RegularHolidayPresentMultiplier
                 : PayrollConstants.RegularHolidayRate,
-            HolidayDays = metrics.RegularHolidayDays,
-            HolidayOtPay = metrics.RegularHolidayPay,
-            RegularHolidayAbsentCount = metrics.RegularHolidayAbsentCount,
+            HolidayDays = holidayDays,
+            HolidayOtPay = regularHolidayPay,
+            RegularHolidayAbsentCount = regularHolidayAbsentCount,
             NightDiffOtRate = 0m,
             NightDiffHours = 0m,
             NightDiffOtPay = 0m,
             LeaveDays = leaveDays,
-            HolidayPay = metrics.HolidayPay,
-            RegularHolidayPay = metrics.RegularHolidayPay,
-            SpecialNonWorkingPay = metrics.SpecialHolidayPay,
+            HolidayPay = holidayPay,
+            RegularHolidayPay = regularHolidayPay,
+            SpecialNonWorkingPay = specialHolidayPay,
             LeaveWithPay = leaveWithPay,
             Incentives = 0m,
             Allowances = 0m,
@@ -319,6 +332,23 @@ public static class PayrollCalculator
 
         return holidaysByDate.ContainsKey(calendarDate);
     }
+
+    /// <summary>
+    /// Fixed employees keep attendance metrics but never receive holiday pay add-ons.
+    /// </summary>
+    private static PayrollHolidayPayCalculator.Result WithoutHolidayPay(
+        PayrollHolidayPayCalculator.Result metrics) =>
+        metrics with
+        {
+            HolidayPay = 0m,
+            RegularHolidayPay = 0m,
+            SpecialHolidayPay = 0m,
+            SpecialOtHours = 0m,
+            RegularHolidayDays = 0m,
+            RegularHolidayWorked = false,
+            RegularHolidayAbsentCount = 0,
+            SpecialHolidayDays = 0m
+        };
 
     private static decimal Round(decimal value) =>
         Math.Round(value, 2, MidpointRounding.AwayFromZero);

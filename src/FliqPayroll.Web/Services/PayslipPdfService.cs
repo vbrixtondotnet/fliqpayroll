@@ -1,6 +1,9 @@
+using System.Globalization;
+using System.Text;
 using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Enums;
+using FliqPayroll.Core.Utilities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -28,16 +31,82 @@ public class PayslipPdfService
 
     public byte[] Generate(PayslipDto payslip)
     {
-        return Document.Create(container =>
+        // Same dual-copy layout as Download All (Employee Copy + Company Copy), one employee.
+        return GenerateAll([payslip]);
+    }
+
+    /// <summary>
+    /// Builds "{Employee Name} - {Payroll Period}.pdf", e.g. "Juan Dela Cruz - June 16-30, 2026.pdf".
+    /// </summary>
+    public static string BuildSinglePayslipFileName(PayslipDto payslip)
+    {
+        Guard.AgainstNull(payslip, nameof(payslip));
+
+        var employeeName = SanitizeFileName(FormatEmployeeDisplayName(payslip.Employee));
+        var period = SanitizeFileName(FormatPayrollPeriod(payslip.Period.StartDate, payslip.Period.EndDate));
+        return $"{employeeName} - {period}.pdf";
+    }
+
+    /// <summary>
+    /// Builds "Payslips - {Payroll Period}.pdf" for the combined download.
+    /// </summary>
+    public static string BuildAllPayslipsFileName(PayrollPeriodDto period)
+    {
+        Guard.AgainstNull(period, nameof(period));
+
+        var periodLabel = SanitizeFileName(FormatPayrollPeriod(period.StartDate, period.EndDate));
+        return $"Payslips - {periodLabel}.pdf";
+    }
+
+    public static string FormatPayrollPeriod(DateTime startDate, DateTime endDate)
+    {
+        var start = PhilippineTime.ToPhilippineDate(startDate);
+        var end = PhilippineTime.ToPhilippineDate(endDate);
+        var culture = CultureInfo.GetCultureInfo("en-US");
+
+        if (start.Year == end.Year && start.Month == end.Month)
         {
-            container.Page(page =>
-            {
-                page.Size(PageSizes.A4);
-                page.Margin(40);
-                page.DefaultTextStyle(x => x.FontSize(PayslipLayout.Full.DefaultFontSize).FontFamily(Fonts.Arial));
-                page.Content().AlignTop().Element(c => ComposePayslip(c, payslip, PayslipLayout.Full));
-            });
-        }).GeneratePdf();
+            return $"{start.ToString("MMMM", culture)} {start.Day}-{end.Day}, {end.Year}";
+        }
+
+        if (start.Year == end.Year)
+        {
+            return $"{start.ToString("MMMM d", culture)} - {end.ToString("MMMM d, yyyy", culture)}";
+        }
+
+        return $"{start.ToString("MMMM d, yyyy", culture)} - {end.ToString("MMMM d, yyyy", culture)}";
+    }
+
+    private static string FormatEmployeeDisplayName(EmployeeDto employee)
+    {
+        var parts = new[] { employee.FirstName, employee.MiddleName, employee.LastName }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part!.Trim());
+
+        var name = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(name) ? "Employee" : name;
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Payslip";
+        }
+
+        var invalid = Path.GetInvalidFileNameChars();
+        var builder = new StringBuilder(value.Length);
+
+        foreach (var ch in value.Trim())
+        {
+            builder.Append(Array.IndexOf(invalid, ch) >= 0 ? ' ' : ch);
+        }
+
+        var sanitized = string.Join(
+            " ",
+            builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "Payslip" : sanitized;
     }
 
     public byte[] GenerateAll(IReadOnlyList<PayslipDto> payslips)
@@ -62,16 +131,24 @@ public class PayslipPdfService
 
                     page.Content().Row(row =>
                     {
-                        row.RelativeItem().Element(c => ComposePayslip(c, payslip, layout));
+                        // Employee Copy — includes personal acknowledgment section.
+                        row.RelativeItem().Element(c =>
+                            ComposePayslip(c, payslip, layout, includeAcknowledgment: true));
                         row.ConstantItem(12);
-                        row.RelativeItem().Element(c => ComposePayslip(c, payslip, layout));
+                        // Company Copy — payroll details only, no acknowledgment fields.
+                        row.RelativeItem().Element(c =>
+                            ComposePayslip(c, payslip, layout, includeAcknowledgment: false));
                     });
                 });
             }
         }).GeneratePdf();
     }
 
-    private void ComposePayslip(IContainer container, PayslipDto payslip, PayslipLayout layout)
+    private void ComposePayslip(
+        IContainer container,
+        PayslipDto payslip,
+        PayslipLayout layout,
+        bool includeAcknowledgment)
     {
         var payroll = payslip.Payroll;
         var employee = payslip.Employee;
@@ -107,24 +184,31 @@ public class PayslipPdfService
             slip.Item().PaddingHorizontal(layout.HorizontalPadding).PaddingTop(layout.TablePaddingTop).Element(c =>
                 ComposePayrollTable(c, payroll, dailyRate, employee.FullName, period.Name, layout));
 
-            slip.Item().PaddingHorizontal(layout.HorizontalPadding).PaddingTop(layout.FooterPaddingTop)
-                .PaddingBottom(layout.FooterPaddingBottom).Column(footer =>
-                {
-                    footer.Item().Text("Personal Copy Received:").FontSize(layout.FooterFontSize);
-                    footer.Item().PaddingTop(layout.SignaturePaddingTop).Row(row =>
+            if (includeAcknowledgment)
+            {
+                slip.Item().PaddingHorizontal(layout.HorizontalPadding).PaddingTop(layout.FooterPaddingTop)
+                    .PaddingBottom(layout.FooterPaddingBottom).Column(footer =>
                     {
-                        row.RelativeItem();
-                        row.ConstantItem(layout.SignatureBlockWidth).Column(signatureBlock =>
+                        footer.Item().Text("Personal Copy Received:").FontSize(layout.FooterFontSize);
+                        footer.Item().PaddingTop(layout.SignaturePaddingTop).Row(row =>
                         {
-                            signatureBlock.Item().Height(layout.SignatureSpacerHeight);
-                            signatureBlock.Item().Height(BorderThickness).Background(BorderColor);
-                            signatureBlock.Item().PaddingTop(2).AlignCenter()
-                                .Text("Signature Over Printed Name & Date")
-                                .FontSize(layout.SignatureFontSize);
+                            row.RelativeItem();
+                            row.ConstantItem(layout.SignatureBlockWidth).Column(signatureBlock =>
+                            {
+                                signatureBlock.Item().Height(layout.SignatureSpacerHeight);
+                                signatureBlock.Item().Height(BorderThickness).Background(BorderColor);
+                                signatureBlock.Item().PaddingTop(2).AlignCenter()
+                                    .Text("Signature Over Printed Name & Date")
+                                    .FontSize(layout.SignatureFontSize);
+                            });
+                            row.RelativeItem();
                         });
-                        row.RelativeItem();
                     });
-                });
+            }
+            else
+            {
+                slip.Item().PaddingBottom(layout.FooterPaddingBottom);
+            }
         });
     }
 

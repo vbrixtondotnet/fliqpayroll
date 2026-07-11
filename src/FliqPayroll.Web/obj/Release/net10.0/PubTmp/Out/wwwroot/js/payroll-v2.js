@@ -256,6 +256,11 @@
             return parseNumber($field.val());
         }
 
+        var $link = $field.find(".payroll-v2-absent-link");
+        if ($link.length) {
+            return parseNumber($link.text());
+        }
+
         return parseNumber($field.text());
     }
 
@@ -586,6 +591,54 @@
         ].join("");
     }
 
+    function absentDaysCell(record) {
+        var days = record.AbsentDays || 0;
+        var formatted = formatNumber(days);
+        var dates = record.AbsentDates || [];
+
+        if (days <= 0 || dates.length === 0) {
+            return '<td class="text-end payroll-v2-readonly" data-field="absentDays">' + formatted + "</td>";
+        }
+
+        return [
+            '<td class="text-end payroll-v2-absent-days" data-field="absentDays">',
+            '<button type="button" class="btn btn-link btn-sm p-0 payroll-v2-absent-link" data-absent-dates=\'',
+            JSON.stringify(dates),
+            '\' title="View absent dates">',
+            formatted,
+            "</button>",
+            "</td>"
+        ].join("");
+    }
+
+    function showAbsentDatesModal($row, dates) {
+        var employeeCode = $row.find(".payroll-v2-employee-code").text().trim();
+        var employeeName = $row.find(".payroll-v2-employee-name").text().trim();
+        var $list = $("#payroll-v2-absent-dates-list").empty();
+
+        $("#payroll-v2-absent-employee").text(employeeCode + " - " + employeeName);
+
+        dates.forEach(function (dateKey) {
+            $list.append("<li>" + escapeHtml(formatShortDate(dateKey)) + "</li>");
+        });
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-absent-modal")).show();
+    }
+
+    function bindAbsentDaysLinks() {
+        $("#payroll-v2-table").on("click", ".payroll-v2-absent-link", function () {
+            var dates = [];
+
+            try {
+                dates = JSON.parse($(this).attr("data-absent-dates") || "[]");
+            } catch (error) {
+                dates = [];
+            }
+
+            showAbsentDatesModal($(this).closest("tr"), dates);
+        });
+    }
+
     function formatSalaryType(salaryType) {
         var labels = {
             0: "Monthly",
@@ -634,7 +687,7 @@
             readonlyMoney(dailyRate, "", "", "dailyRate"),
             readonlyMoney(record.HourlyRate, "", "", "hourlyRate"),
             editableInput(record.WorkingDays, "number", "workingDays"),
-            editableInput(record.AbsentDays, "number", "absentDays"),
+            absentDaysCell(record),
             readonlyMoney(record.AbsentAmount, "", "", "absentAmount"),
             readonlyMoney(record.GrossSalary, "fw-semibold", "", "grossSalary"),
             editableInput(record.RegularOtRate, "rate", "regularOtRate"),
@@ -942,6 +995,7 @@
     $(function () {
         bindValidation();
         bindPeriodControls();
+        bindAbsentDaysLinks();
         initEmployeeFilter();
         loadEmployees();
     });

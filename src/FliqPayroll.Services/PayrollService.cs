@@ -1,4 +1,5 @@
 using FliqPayroll.Core.DTOs;
+using FliqPayroll.Core.Enums;
 using FliqPayroll.Core.Interfaces;
 using FliqPayroll.Core.Utilities;
 using FliqPayroll.Services.Interfaces;
@@ -92,7 +93,23 @@ public class PayrollService : IPayrollService
             leavesByEmployee.TryGetValue(employee.Id, out var employeeLeaves);
             employeeLeaves ??= Array.Empty<LeaveDto>();
 
-            results.Add(PayrollCalculator.Compute(employee, attendance, period, holidays, employeeLeaves));
+            var payroll = PayrollCalculator.Compute(employee, attendance, period, holidays, employeeLeaves);
+
+            // Fixed salary: never include holiday pay; cutoff pay stays BasicSalary / 2.
+            if (employee.SalaryType == SalaryType.Fixed)
+            {
+                payroll.HolidayPay = 0m;
+                payroll.RegularHolidayPay = 0m;
+                payroll.SpecialNonWorkingPay = 0m;
+                payroll.HolidayOtPay = 0m;
+                payroll.SpecialOtPay = 0m;
+                payroll.SpecialOtHours = 0m;
+                payroll.HolidayDays = 0m;
+                payroll.RegularHolidayAbsentCount = 0;
+                payroll.GrossPay = payroll.BasicPayAmount;
+            }
+
+            results.Add(payroll);
         }
 
         return results;
@@ -157,4 +174,31 @@ public class PayrollService : IPayrollService
         int payrollPeriodId,
         CancellationToken cancellationToken = default) =>
         _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
+
+    public async Task<byte[]> ExportExcelAsync(
+        DateTime fromDate,
+        DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        return PayrollExportBuilder.BuildExcel(data);
+    }
+
+    public async Task<byte[]> ExportCsvAsync(
+        DateTime fromDate,
+        DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        return PayrollExportBuilder.BuildCsv(data);
+    }
+
+    public async Task<byte[]> ExportPdfAsync(
+        DateTime fromDate,
+        DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        return PayrollExportBuilder.BuildPdf(data);
+    }
 }

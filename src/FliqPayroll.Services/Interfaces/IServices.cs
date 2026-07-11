@@ -68,6 +68,12 @@ public interface IPayrollService
 
     Task<PayrollByDateRangeDto?> GetSavedPeriodByIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
 
+    Task<byte[]> ExportExcelAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportCsvAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportPdfAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
 }
 
 

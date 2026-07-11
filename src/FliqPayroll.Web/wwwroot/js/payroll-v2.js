@@ -5,7 +5,16 @@
         getByDateRange: "/api/payroll/getByDateRange",
         defaultPeriod: "/api/payroll/defaultPeriod",
         savePeriod: "/api/payroll/savePeriod",
-        employees: "/api/employees"
+        employees: "/api/employees",
+        exportExcel: function (from, to) {
+            return "/api/payroll/export/excel?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to);
+        },
+        exportCsv: function (from, to) {
+            return "/api/payroll/export/csv?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to);
+        },
+        exportPdf: function (from, to) {
+            return "/api/payroll/export/pdf?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to);
+        }
     };
 
     const patterns = {
@@ -256,6 +265,11 @@
             return parseNumber($field.val());
         }
 
+        var $link = $field.find(".payroll-v2-absent-link");
+        if ($link.length) {
+            return parseNumber($link.text());
+        }
+
         return parseNumber($field.text());
     }
 
@@ -365,6 +379,7 @@
         }
 
         var salaryType = parseInt($row.data("salary-type"), 10);
+        var isFixed = salaryType === 2;
         var hourlyRate = parseFloat($row.data("hourly-rate")) || 0;
         var dailyRate = parseFloat($row.data("daily-rate")) || 0;
         var baseGross = parseFloat($row.data("base-gross")) || 0;
@@ -381,15 +396,20 @@
 
         var regularOtPay = roundMoney(
             getFieldValue($row, "regularOtHours") * hourlyRate * getFieldValue($row, "regularOtRate"));
-        var specialOtPay = roundMoney(calculateSpecialNonWorkingPay(
-            dailyRate,
-            getFieldValue($row, "specialOtHours"),
-            getFieldValue($row, "specialOtRate")));
-        var holidayOtPay = roundMoney(calculateRegularHolidayPay(
-            dailyRate,
-            getFieldValue($row, "holidayDays"),
-            getFieldValue($row, "holidayOtRate"),
-            parseFloat($row.data("regular-holiday-absent-count")) || 0));
+        // Fixed employees: HolidayPay is always 0 — skip regular/special holiday pay.
+        var specialOtPay = isFixed
+            ? 0
+            : roundMoney(calculateSpecialNonWorkingPay(
+                dailyRate,
+                getFieldValue($row, "specialOtHours"),
+                getFieldValue($row, "specialOtRate")));
+        var holidayOtPay = isFixed
+            ? 0
+            : roundMoney(calculateRegularHolidayPay(
+                dailyRate,
+                getFieldValue($row, "holidayDays"),
+                getFieldValue($row, "holidayOtRate"),
+                parseFloat($row.data("regular-holiday-absent-count")) || 0));
         var nightDiffOtPay = roundMoney(
             getFieldValue($row, "nightDiffHours") * hourlyRate * getFieldValue($row, "nightDiffOtRate"));
         var leavePay = roundMoney(getFieldValue($row, "leaveDays") * dailyRate);
@@ -531,6 +551,20 @@
         $("#payroll-v2-save-btn").toggleClass("d-none", !isVisible);
     }
 
+    function setExportVisible(isVisible) {
+        $("#payroll-v2-export-toolbar").toggleClass("d-none", !isVisible);
+
+        if (!isVisible) {
+            $("#payroll-v2-export-excel, #payroll-v2-export-csv, #payroll-v2-export-pdf").attr("href", "#");
+            return;
+        }
+
+        var range = getDateRange();
+        $("#payroll-v2-export-excel").attr("href", api.exportExcel(range.fromDate, range.toDate));
+        $("#payroll-v2-export-csv").attr("href", api.exportCsv(range.fromDate, range.toDate));
+        $("#payroll-v2-export-pdf").attr("href", api.exportPdf(range.fromDate, range.toDate));
+    }
+
     function setSaving(isSaving) {
         $("#payroll-v2-save-btn").prop("disabled", isSaving);
     }
@@ -586,6 +620,54 @@
         ].join("");
     }
 
+    function absentDaysCell(record) {
+        var days = record.AbsentDays || 0;
+        var formatted = formatNumber(days);
+        var dates = record.AbsentDates || [];
+
+        if (days <= 0 || dates.length === 0) {
+            return '<td class="text-end payroll-v2-readonly" data-field="absentDays">' + formatted + "</td>";
+        }
+
+        return [
+            '<td class="text-end payroll-v2-absent-days" data-field="absentDays">',
+            '<button type="button" class="btn btn-link btn-sm p-0 payroll-v2-absent-link" data-absent-dates=\'',
+            JSON.stringify(dates),
+            '\' title="View absent dates">',
+            formatted,
+            "</button>",
+            "</td>"
+        ].join("");
+    }
+
+    function showAbsentDatesModal($row, dates) {
+        var employeeCode = $row.find(".payroll-v2-employee-code").text().trim();
+        var employeeName = $row.find(".payroll-v2-employee-name").text().trim();
+        var $list = $("#payroll-v2-absent-dates-list").empty();
+
+        $("#payroll-v2-absent-employee").text(employeeCode + " - " + employeeName);
+
+        dates.forEach(function (dateKey) {
+            $list.append("<li>" + escapeHtml(formatShortDate(dateKey)) + "</li>");
+        });
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-absent-modal")).show();
+    }
+
+    function bindAbsentDaysLinks() {
+        $("#payroll-v2-table").on("click", ".payroll-v2-absent-link", function () {
+            var dates = [];
+
+            try {
+                dates = JSON.parse($(this).attr("data-absent-dates") || "[]");
+            } catch (error) {
+                dates = [];
+            }
+
+            showAbsentDatesModal($(this).closest("tr"), dates);
+        });
+    }
+
     function formatSalaryType(salaryType) {
         var labels = {
             0: "Monthly",
@@ -614,7 +696,13 @@
 
     function renderRow(record) {
         var isDaily = record.SalaryType === 1;
+        var isFixed = record.SalaryType === 2;
         var dailyRate = isDaily ? record.BasicSalary : record.DailyRate;
+        var holidayOtPay = isFixed ? 0 : (record.HolidayOtPay || 0);
+        var specialOtPay = isFixed ? 0 : (record.SpecialOtPay || 0);
+        var holidayDays = isFixed ? 0 : (record.HolidayDays || 0);
+        var specialOtHours = isFixed ? 0 : (record.SpecialOtHours || 0);
+        var regularHolidayAbsentCount = isFixed ? 0 : (record.RegularHolidayAbsentCount || 0);
 
         return [
             '<tr data-employee-id="', record.EmployeeId,
@@ -625,7 +713,7 @@
             '" data-hourly-rate="', record.HourlyRate,
             '" data-daily-rate="', dailyRate,
             '" data-base-gross="', record.GrossSalary,
-            '" data-regular-holiday-absent-count="', record.RegularHolidayAbsentCount || 0, '">',
+            '" data-regular-holiday-absent-count="', regularHolidayAbsentCount, '">',
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-0 payroll-v2-employee-code">', escapeHtml(record.EmployeeCode), "</td>",
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1 payroll-v2-employee-name">', escapeHtml(record.EmployeeName), "</td>",
             '<td class="text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
@@ -634,18 +722,18 @@
             readonlyMoney(dailyRate, "", "", "dailyRate"),
             readonlyMoney(record.HourlyRate, "", "", "hourlyRate"),
             editableInput(record.WorkingDays, "number", "workingDays"),
-            editableInput(record.AbsentDays, "number", "absentDays"),
+            absentDaysCell(record),
             readonlyMoney(record.AbsentAmount, "", "", "absentAmount"),
             readonlyMoney(record.GrossSalary, "fw-semibold", "", "grossSalary"),
             editableInput(record.RegularOtRate, "rate", "regularOtRate"),
             editableInput(record.RegularOtHours, "number", "regularOtHours"),
             readonlyMoney(record.OvertimePay, "", "", "regularOtPay"),
             editableInput(record.SpecialOtRate, "rate", "specialOtRate"),
-            editableInput(record.SpecialOtHours, "number", "specialOtHours"),
-            readonlyMoney(record.SpecialOtPay, "", "", "specialOtPay"),
+            editableInput(specialOtHours, "number", "specialOtHours"),
+            readonlyMoney(specialOtPay, "", "", "specialOtPay"),
             editableInput(record.HolidayOtRate, "rate", "holidayOtRate"),
-            editableInput(record.HolidayDays, "number", "holidayDays"),
-            readonlyMoney(record.HolidayOtPay, "", "", "holidayOtPay"),
+            editableInput(holidayDays, "number", "holidayDays"),
+            readonlyMoney(holidayOtPay, "", "", "holidayOtPay"),
             editableInput(record.NightDiffOtRate, "rate", "nightDiffOtRate"),
             editableInput(record.NightDiffHours, "number", "nightDiffHours"),
             readonlyMoney(record.NightDiffOtPay, "", "", "nightDiffOtPay"),
@@ -669,10 +757,11 @@
 
     function collectRowPayload($row) {
         var salaryType = parseInt($row.data("salary-type"), 10);
+        var isFixed = salaryType === 2;
         var grossSalary = getFieldValue($row, "grossSalary");
         var regularOtPay = getFieldValue($row, "regularOtPay");
-        var specialOtPay = getFieldValue($row, "specialOtPay");
-        var holidayOtPay = getFieldValue($row, "holidayOtPay");
+        var specialOtPay = isFixed ? 0 : getFieldValue($row, "specialOtPay");
+        var holidayOtPay = isFixed ? 0 : getFieldValue($row, "holidayOtPay");
         var nightDiffOtPay = getFieldValue($row, "nightDiffOtPay");
         var leavePay = getFieldValue($row, "leavePay");
         var absentAmount = getFieldValue($row, "absentAmount");
@@ -710,10 +799,10 @@
             RegularOtRate: getFieldValue($row, "regularOtRate"),
             RegularOtHours: getFieldValue($row, "regularOtHours"),
             SpecialOtRate: getFieldValue($row, "specialOtRate"),
-            SpecialOtHours: getFieldValue($row, "specialOtHours"),
+            SpecialOtHours: isFixed ? 0 : getFieldValue($row, "specialOtHours"),
             SpecialOtPay: specialOtPay,
             HolidayOtRate: getFieldValue($row, "holidayOtRate"),
-            HolidayDays: getFieldValue($row, "holidayDays"),
+            HolidayDays: isFixed ? 0 : getFieldValue($row, "holidayDays"),
             HolidayOtPay: holidayOtPay,
             NightDiffOtRate: getFieldValue($row, "nightDiffOtRate"),
             NightDiffHours: getFieldValue($row, "nightDiffHours"),
@@ -848,6 +937,7 @@
         hideSaveSuccess();
         setLoading(true);
         setSaveButtonVisible(false);
+        setExportVisible(false);
         payrollGenerated = false;
 
         var periodLabel = formatPeriodLabel(range.fromDate, range.toDate);
@@ -919,6 +1009,7 @@
                 }
 
                 showSaveSuccess(response.Message || "Payroll period saved successfully.");
+                setExportVisible(true);
             })
             .fail(function (xhr) {
                 if (xhr.statusText === "abort") {
@@ -937,11 +1028,16 @@
         setDefaultDates();
         $("#payroll-v2-generate-btn").on("click", loadPayroll);
         $("#payroll-v2-save-btn").on("click", savePayrollPeriod);
+        $("#payroll-v2-from-date, #payroll-v2-to-date").on("change", function () {
+            setExportVisible(false);
+            hideSaveSuccess();
+        });
     }
 
     $(function () {
         bindValidation();
         bindPeriodControls();
+        bindAbsentDaysLinks();
         initEmployeeFilter();
         loadEmployees();
     });

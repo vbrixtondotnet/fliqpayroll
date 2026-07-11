@@ -13,6 +13,7 @@ public static class PayrollHolidayPayCalculator
         decimal SpecialOtHours,
         decimal WorkingDays,
         decimal AbsentDays,
+        IReadOnlyList<DateTime> AbsentDates,
         decimal RegularHolidayDays,
         bool RegularHolidayWorked,
         int RegularHolidayAbsentCount,
@@ -34,7 +35,7 @@ public static class PayrollHolidayPayCalculator
 
         if (end < start)
         {
-            return new Result(0m, 0m, 0m, 0m, 0m, 0m, 0m, false, 0, 0m, 0m);
+            return new Result(0m, 0m, 0m, 0m, 0m, 0m, [], 0m, false, 0, 0m, 0m);
         }
 
         var leaveDates = BuildLeaveDates(leaves, start, end);
@@ -45,6 +46,7 @@ public static class PayrollHolidayPayCalculator
 
         decimal workingDays = 0;
         decimal absentDays = 0;
+        var absentDates = new List<DateTime>();
         decimal regularHolidayPay = 0;
         decimal specialHolidayPay = 0;
         decimal specialOtHours = 0;
@@ -127,6 +129,7 @@ public static class PayrollHolidayPayCalculator
             else
             {
                 absentDays++;
+                absentDates.Add(date);
             }
         }
 
@@ -142,6 +145,7 @@ public static class PayrollHolidayPayCalculator
             specialOtHours,
             workingDays,
             absentDays,
+            absentDates,
             regularHolidayDays,
             regularHolidayWorked,
             regularHolidayAbsentCount,
