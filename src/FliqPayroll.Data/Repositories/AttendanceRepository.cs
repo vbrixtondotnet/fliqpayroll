@@ -361,22 +361,12 @@ public class AttendanceRepository : IAttendanceRepository
 
     private static AttendanceDto MapToDto(AttendanceRecord entity)
     {
-        var hasValidOvertime = AttendancePolicyProcessor.HasValidOvertime(entity.OvertimeIn, entity.OvertimeOut);
         var timeIn = entity.TimeIn;
         var timeOut = entity.TimeOut;
-
-        // Scenario 2 legacy rows: expose First/Last Bio as Time In/Out for Payroll and Attendance pages.
-        if (AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
-                entity.TimeIn,
-                entity.TimeOut,
-                hasValidOvertime ? entity.OvertimeIn : null,
-                hasValidOvertime ? entity.OvertimeOut : null,
-                out var effectiveIn,
-                out var effectiveOut))
-        {
-            timeIn = effectiveIn;
-            timeOut = effectiveOut;
-        }
+        var hasValidOvertime = AttendancePolicyProcessor.TryGetOvertimeWindow(
+            timeOut,
+            out var overtimeIn,
+            out var overtimeOut);
 
         return new AttendanceDto
         {
@@ -388,8 +378,8 @@ public class AttendanceRepository : IAttendanceRepository
             TimeIn = timeIn,
             TimeOut = timeOut,
             IsLate = AttendanceConstants.IsLateTimeIn(timeIn),
-            OvertimeIn = hasValidOvertime ? entity.OvertimeIn : null,
-            OvertimeOut = hasValidOvertime ? entity.OvertimeOut : null,
+            OvertimeIn = hasValidOvertime ? overtimeIn : null,
+            OvertimeOut = hasValidOvertime ? overtimeOut : null,
             IsOvertimeValid = hasValidOvertime,
             IsFromBiometric = entity.IsFromBiometric,
             Notes = entity.Notes

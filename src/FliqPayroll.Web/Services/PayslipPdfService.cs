@@ -3,6 +3,7 @@ using System.Text;
 using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Enums;
+using FliqPayroll.Core.Interfaces;
 using FliqPayroll.Core.Utilities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -10,7 +11,7 @@ using QuestPDF.Infrastructure;
 
 namespace FliqPayroll.Web.Services;
 
-public class PayslipPdfService
+public class PayslipPdfService : IPayslipDocumentGenerator
 {
     private const float BorderThickness = 1f;
     private static readonly string BorderColor = Colors.Black;
@@ -36,6 +37,30 @@ public class PayslipPdfService
     }
 
     /// <summary>
+    /// Employee Copy only — used when emailing the payslip (no Company Copy).
+    /// </summary>
+    public byte[] GenerateEmployeeCopy(PayslipDto payslip)
+    {
+        Guard.AgainstNull(payslip, nameof(payslip));
+
+        var layout = PayslipLayout.Compact;
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4.Landscape());
+                page.MarginHorizontal(18);
+                page.MarginVertical(14);
+                page.DefaultTextStyle(x => x.FontSize(layout.DefaultFontSize).FontFamily(Fonts.Arial));
+
+                page.Content().AlignCenter().Width(380).Element(c =>
+                    ComposePayslip(c, payslip, layout, includeAcknowledgment: true));
+            });
+        }).GeneratePdf();
+    }
+
+    /// <summary>
     /// Builds "{Employee Name} - {Payroll Period}.pdf", e.g. "Juan Dela Cruz - June 16-30, 2026.pdf".
     /// </summary>
     public static string BuildSinglePayslipFileName(PayslipDto payslip)
@@ -46,6 +71,9 @@ public class PayslipPdfService
         var period = SanitizeFileName(FormatPayrollPeriod(payslip.Period.StartDate, payslip.Period.EndDate));
         return $"{employeeName} - {period}.pdf";
     }
+
+    string IPayslipDocumentGenerator.BuildSinglePayslipFileName(PayslipDto payslip) =>
+        BuildSinglePayslipFileName(payslip);
 
     /// <summary>
     /// Builds "Payslips - {Payroll Period}.pdf" for the combined download.
@@ -76,6 +104,9 @@ public class PayslipPdfService
 
         return $"{start.ToString("MMMM d, yyyy", culture)} - {end.ToString("MMMM d, yyyy", culture)}";
     }
+
+    string IPayslipDocumentGenerator.FormatPayrollPeriod(DateTime startDate, DateTime endDate) =>
+        FormatPayrollPeriod(startDate, endDate);
 
     private static string FormatEmployeeDisplayName(EmployeeDto employee)
     {

@@ -20,25 +20,25 @@ public class AttendanceDto
     public string? Notes { get; set; }
 
     /// <summary>
-    /// Present when Time In + Time Out exist, or Time In + complete Overtime In/Out (OT Out alone is ignored).
+    /// Present only when regular Time In and Time Out exist.
     /// </summary>
     public bool IsAttendanceValid =>
-        AttendancePolicyProcessor.IsPresent(TimeIn, TimeOut, OvertimeIn, OvertimeOut);
+        AttendancePolicyProcessor.IsPresent(TimeIn, TimeOut);
 
     public decimal HoursWorked =>
         AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
-            TimeIn, TimeOut, OvertimeIn, OvertimeOut, out var effectiveIn, out var effectiveOut)
+            TimeIn, TimeOut, out var effectiveIn, out var effectiveOut)
             ? Math.Max(0m, Math.Round((decimal)(effectiveOut - effectiveIn).TotalHours, 2, MidpointRounding.AwayFromZero))
             : 0m;
 
     public decimal OvertimeHours =>
-        AttendancePolicyProcessor.HasValidOvertime(OvertimeIn, OvertimeOut)
-            ? Math.Round((decimal)(OvertimeOut!.Value - OvertimeIn!.Value).TotalHours, 2, MidpointRounding.AwayFromZero)
+        AttendancePolicyProcessor.TryGetOvertimeWindow(TimeOut, out var overtimeIn, out var overtimeOut)
+            ? Math.Round((decimal)(overtimeOut - overtimeIn).TotalHours, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
     public decimal LateMinutes =>
         AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
-            TimeIn, TimeOut, OvertimeIn, OvertimeOut, out var effectiveIn, out _)
+            TimeIn, TimeOut, out var effectiveIn, out _)
             ? AttendanceConstants.CalculateLateMinutes(effectiveIn)
             : AttendanceConstants.CalculateLateMinutes(TimeIn);
 }

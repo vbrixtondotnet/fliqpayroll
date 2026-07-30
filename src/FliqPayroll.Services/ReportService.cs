@@ -112,7 +112,21 @@ public class ReportService : IReportService
 
         };
 
+        var employees = await _employeeRepository.GetAllAsync(cancellationToken: cancellationToken);
+        var emailByEmployeeId = employees.ToDictionary(e => e.Id, e => e.Email);
 
+        var records = saved.Records
+            .Select(record =>
+            {
+                if (emailByEmployeeId.TryGetValue(record.EmployeeId, out var email)
+                    && !string.IsNullOrWhiteSpace(email))
+                {
+                    record.Email = email;
+                }
+
+                return record;
+            })
+            .ToList();
 
         return new PayrollSummaryReportDto
 
@@ -122,13 +136,13 @@ public class ReportService : IReportService
 
             Period = period,
 
-            Records = saved.Records,
+            Records = records,
 
-            TotalGrossPay = saved.Records.Sum(r => r.GrossPay),
+            TotalGrossPay = records.Sum(r => r.GrossPay),
 
-            TotalDeductions = saved.Records.Sum(r => r.TotalDeductions),
+            TotalDeductions = records.Sum(r => r.TotalDeductions),
 
-            TotalNetPay = saved.Records.Sum(r => r.NetPay)
+            TotalNetPay = records.Sum(r => r.NetPay)
 
         };
 

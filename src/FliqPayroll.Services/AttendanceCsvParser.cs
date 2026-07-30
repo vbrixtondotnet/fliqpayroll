@@ -95,10 +95,9 @@ internal static class AttendanceCsvParser
 
         if (attendanceCode is not (
             AttendanceConstants.CodeTimeIn or
-            AttendanceConstants.CodeTimeOut or
-            AttendanceConstants.CodeOvertimeIn or
-            AttendanceConstants.CodeOvertimeOut))
+            AttendanceConstants.CodeTimeOut))
         {
+            // Ignore OT In/Out (codes 4/5) and any other unsupported punch codes.
             return false;
         }
 

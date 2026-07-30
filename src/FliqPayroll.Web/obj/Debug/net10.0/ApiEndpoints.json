@@ -925,6 +925,37 @@
   },
   {
     "ContainingType": "FliqPayroll.Web.Controllers.Api.ReportsApiController",
+    "Method": "SendPayslipEmail",
+    "RelativePath": "api/reports/payslip/email",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "employeeId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "payrollPeriodId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "FliqPayroll.Core.DTOs.ApiResult\u00601[[System.Object, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "FliqPayroll.Web.Controllers.Api.ReportsApiController",
     "Method": "GetPayslipPdf",
     "RelativePath": "api/reports/payslip/pdf",
     "HttpMethod": "GET",

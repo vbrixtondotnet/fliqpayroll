@@ -27,15 +27,22 @@ public class ReportsApiController : ControllerBase
 
     private readonly PayslipPdfService _payslipPdfService;
 
+    private readonly IPayslipEmailService _payslipEmailService;
 
 
-    public ReportsApiController(IReportService reportService, PayslipPdfService payslipPdfService)
+
+    public ReportsApiController(
+        IReportService reportService,
+        PayslipPdfService payslipPdfService,
+        IPayslipEmailService payslipEmailService)
 
     {
 
         _reportService = reportService;
 
         _payslipPdfService = payslipPdfService;
+
+        _payslipEmailService = payslipEmailService;
 
     }
 
@@ -206,6 +213,38 @@ public class ReportsApiController : ControllerBase
         var fileName = PayslipPdfService.BuildSinglePayslipFileName(payslip);
         return File(pdf, "application/pdf", fileName);
 
+    }
+
+    [HttpPost("payslip/email")]
+    public async Task<ActionResult<ApiResult<object>>> SendPayslipEmail(
+        [FromQuery] int employeeId,
+        [FromQuery] int payrollPeriodId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _payslipEmailService.SendPayslipEmailAsync(employeeId, payrollPeriodId, cancellationToken);
+            return Ok(ApiResult<object>.Ok(new { }, "Payslip emailed successfully."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResult<object>.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(ApiResult<object>.Fail(ex.Message));
+            }
+
+            return BadRequest(ApiResult<object>.Fail(ex.Message));
+        }
+        catch (Exception)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResult<object>.Fail("Failed to send payslip email."));
+        }
     }
 
     [HttpGet("payslip/pdf/all")]

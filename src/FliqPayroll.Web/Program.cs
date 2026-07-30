@@ -1,9 +1,11 @@
+using FliqPayroll.Core.Interfaces;
 using FliqPayroll.Core.Utilities;
 using FliqPayroll.Data;
 using FliqPayroll.Data.Entities;
 using FliqPayroll.Services;
 using FliqPayroll.Web;
 using FliqPayroll.Web.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,8 +20,15 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddFliqPayrollData(connectionString);
-builder.Services.AddFliqPayrollServices();
+builder.Services.AddFliqPayrollServices(builder.Configuration);
 builder.Services.AddScoped<PayslipPdfService>();
+builder.Services.AddScoped<IPayslipDocumentGenerator>(sp => sp.GetRequiredService<PayslipPdfService>());
+
+var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
+Directory.CreateDirectory(dataProtectionKeysPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("FliqPayroll");
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {

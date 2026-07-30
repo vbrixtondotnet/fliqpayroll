@@ -9,6 +9,9 @@ public static class AttendanceConstants
 
     public static readonly TimeSpan WorkStart = new(8, 0, 0);
     public static readonly TimeSpan WorkEnd = new(17, 0, 0);
+    /// <summary>Overtime starts only after two full hours beyond the 5:00 PM work end.</summary>
+    public static readonly TimeSpan OvertimeThreshold = new(19, 0, 0);
+    public const decimal MinimumOvertimeHours = 2m;
     /// <summary>Grace period ends at 8:15 AM Philippine Time (UTC+8).</summary>
     public static readonly TimeSpan GracePeriodEnd = new(8, 15, 0);
     /// <summary>Late threshold starts at 8:16 AM Philippine Time (UTC+8).</summary>

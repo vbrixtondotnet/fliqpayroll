@@ -11,19 +11,45 @@ namespace FliqPayroll.Services;
 
 internal static class PayrollExportBuilder
 {
-    private static readonly string[] Headers =
+    private static readonly ExportColumn[] Columns =
     [
-        "Code",
-        "Employee",
-        "Salary Type",
-        "Basic",
-        "Working Days",
-        "Absent Days",
-        "OT Pay",
-        "Holiday Pay",
-        "Gross",
-        "Deductions",
-        "Net Pay"
+        Text("Employee Code", r => r.EmployeeCode, 1.2f),
+        Text("Full Name", r => r.EmployeeName, 2.2f),
+        Text("Salary Type", r => r.SalaryType.ToString(), 1.2f),
+        Money("Salary - Monthly", r => r.MonthlySalary),
+        Money("Salary - Bi-Monthly", r => r.BiMonthlySalary),
+        Money("Salary - Daily", r => r.DailyRate),
+        Money("Salary - Hourly", r => r.HourlyRate),
+        Number("Working - Days", r => r.WorkingDays),
+        Number("Absent - Days", r => r.AbsentDays),
+        Money("Absent - Amount", r => r.AbsentAmount),
+        Money("Gross Salary", r => r.GrossSalary),
+        Number("Regular OT - Rate", r => r.RegularOtRate),
+        Number("Regular OT - Hours", r => r.RegularOtHours),
+        Money("Regular OT - Amount", r => r.OvertimePay),
+        Number("Special Non-Working/Rest Day - Rate", r => r.SpecialOtRate),
+        Number("Special Non-Working/Rest Day - Hours", r => r.SpecialOtHours),
+        Money("Special Non-Working/Rest Day - Amount", r => r.SpecialOtPay),
+        Number("Regular Holiday - Rate", r => r.HolidayOtRate),
+        Number("Regular Holiday - Days", r => r.HolidayDays),
+        Money("Regular Holiday - Amount", r => r.HolidayOtPay),
+        Number("Night Diff - Rate", r => r.NightDiffOtRate),
+        Number("Night Diff - Hours", r => r.NightDiffHours),
+        Money("Night Diff - Amount", r => r.NightDiffOtPay),
+        Number("Leave With Pay - Days", r => r.LeaveDays),
+        Money("Leave With Pay - Amount", r => r.LeaveWithPay),
+        Money("Government Dues - SSS", r => r.SssDeduction),
+        Money("Government Dues - PhilHealth", r => r.PhilHealthDeduction),
+        Money("Government Dues - Pag-IBIG", r => r.PagIbigDeduction),
+        Number("Late/Undertime - Minutes", r => r.LateUndertimeHours),
+        Money("Late/Undertime - Amount", r => r.LateUndertimeAmount),
+        Money("Loan - SSS Salary", r => r.SssLoanDeduction),
+        Money("Loan - SSS Calamity", r => r.SssCalamityDeduction),
+        Money("Loan - Pag-IBIG Salary", r => r.PagIbigLoanDeduction),
+        Money("To Add", r => r.ToAdd),
+        Money("To Deduct", r => r.ToDeduct),
+        Money("Actual Salary This Cutoff", r => r.NetPay),
+        Text("BPI / Cash", r => r.PaymentMethod ?? "Cash", 1.2f)
     ];
 
     static PayrollExportBuilder()
@@ -34,22 +60,11 @@ internal static class PayrollExportBuilder
     public static byte[] BuildCsv(PayrollByDateRangeDto data)
     {
         var builder = new StringBuilder();
-        builder.AppendLine(string.Join(",", Headers.Select(CsvEscape)));
+        builder.AppendLine(string.Join(",", Columns.Select(column => CsvEscape(column.Header))));
 
         foreach (var record in data.Records)
         {
-            builder.AppendLine(string.Join(",",
-                CsvEscape(record.EmployeeCode),
-                CsvEscape(record.EmployeeName),
-                CsvEscape(record.SalaryType.ToString()),
-                FormatAmount(record.BasicSalary),
-                FormatNumber(record.WorkingDays),
-                FormatNumber(record.AbsentDays),
-                FormatAmount(record.OvertimePay),
-                FormatAmount(record.HolidayPay),
-                FormatAmount(record.GrossPay),
-                FormatAmount(record.TotalDeductions),
-                FormatAmount(record.NetPay)));
+            builder.AppendLine(string.Join(",", Columns.Select(column => CsvEscape(column.Display(record)))));
         }
 
         return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(builder.ToString())).ToArray();
@@ -62,39 +77,44 @@ internal static class PayrollExportBuilder
 
         worksheet.Cell(1, 1).Value = AppConstants.CompanyName;
         worksheet.Cell(1, 1).Style.Font.Bold = true;
-        worksheet.Range(1, 1, 1, Headers.Length).Merge();
+        worksheet.Range(1, 1, 1, Columns.Length).Merge();
 
         worksheet.Cell(2, 1).Value = $"Payroll Period: {data.PeriodName}";
-        worksheet.Range(2, 1, 2, Headers.Length).Merge();
+        worksheet.Range(2, 1, 2, Columns.Length).Merge();
 
-        for (var col = 0; col < Headers.Length; col++)
+        for (var col = 0; col < Columns.Length; col++)
         {
             var cell = worksheet.Cell(4, col + 1);
-            cell.Value = Headers[col];
+            cell.Value = Columns[col].Header;
             cell.Style.Font.Bold = true;
             cell.Style.Fill.BackgroundColor = XLColor.LightGray;
+            cell.Style.Alignment.WrapText = true;
         }
 
         var row = 5;
         foreach (var record in data.Records)
         {
-            worksheet.Cell(row, 1).Value = record.EmployeeCode;
-            worksheet.Cell(row, 2).Value = record.EmployeeName;
-            worksheet.Cell(row, 3).Value = record.SalaryType.ToString();
-            worksheet.Cell(row, 4).Value = record.BasicSalary;
-            worksheet.Cell(row, 5).Value = record.WorkingDays;
-            worksheet.Cell(row, 6).Value = record.AbsentDays;
-            worksheet.Cell(row, 7).Value = record.OvertimePay;
-            worksheet.Cell(row, 8).Value = record.HolidayPay;
-            worksheet.Cell(row, 9).Value = record.GrossPay;
-            worksheet.Cell(row, 10).Value = record.TotalDeductions;
-            worksheet.Cell(row, 11).Value = record.NetPay;
+            for (var col = 0; col < Columns.Length; col++)
+            {
+                var column = Columns[col];
+                var cell = worksheet.Cell(row, col + 1);
 
-            worksheet.Range(row, 4, row, 4).Style.NumberFormat.Format = "#,##0.00";
-            worksheet.Range(row, 7, row, 11).Style.NumberFormat.Format = "#,##0.00";
+                if (column.NumericValue is not null)
+                {
+                    cell.Value = column.NumericValue(record);
+                    cell.Style.NumberFormat.Format = column.IsMoney ? "#,##0.00" : "0.##";
+                }
+                else
+                {
+                    cell.Value = column.Display(record);
+                }
+            }
+
             row++;
         }
 
+        worksheet.SheetView.FreezeRows(4);
+        worksheet.Range(4, 1, Math.Max(4, row - 1), Columns.Length).SetAutoFilter();
         worksheet.Columns().AdjustToContents();
 
         using var stream = new MemoryStream();
@@ -108,59 +128,51 @@ internal static class PayrollExportBuilder
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4.Landscape());
-                page.Margin(28);
-                page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Arial));
+                page.Size(PageSizes.A3.Landscape());
+                page.Margin(18);
+                page.DefaultTextStyle(x => x.FontSize(5).FontFamily(Fonts.Arial));
 
                 page.Header().Column(header =>
                 {
-                    header.Item().Text(AppConstants.CompanyName).Bold().FontSize(14);
-                    header.Item().Text($"Payroll Export — {data.PeriodName}").FontSize(11);
-                    header.Item().PaddingBottom(8);
+                    header.Item().Text(AppConstants.CompanyName).Bold().FontSize(10);
+                    header.Item().Text($"Payroll Export — {data.PeriodName}").FontSize(8);
+                    header.Item().PaddingBottom(5);
                 });
 
                 page.Content().Table(table =>
                 {
                     table.ColumnsDefinition(columns =>
                     {
-                        columns.RelativeColumn(1.1f);
-                        columns.RelativeColumn(2.2f);
-                        columns.RelativeColumn(1.1f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.3f);
+                        foreach (var column in Columns)
+                        {
+                            columns.RelativeColumn(column.RelativeWidth);
+                        }
                     });
 
-                    foreach (var header in Headers)
+                    foreach (var column in Columns)
                     {
-                        table.Cell().Element(HeaderCell).Text(header).Bold().FontSize(8);
+                        table.Cell().Element(HeaderCell).Text(column.Header).Bold().FontSize(4.5f);
                     }
 
                     foreach (var record in data.Records)
                     {
-                        table.Cell().Element(BodyCell).Text(record.EmployeeCode).FontSize(8);
-                        table.Cell().Element(BodyCell).Text(record.EmployeeName).FontSize(8);
-                        table.Cell().Element(BodyCell).Text(record.SalaryType.ToString()).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.BasicSalary)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatNumber(record.WorkingDays)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatNumber(record.AbsentDays)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.OvertimePay)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.HolidayPay)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.GrossPay)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.TotalDeductions)).FontSize(8);
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatAmount(record.NetPay)).Bold().FontSize(8);
+                        foreach (var column in Columns)
+                        {
+                            var cell = table.Cell().Element(BodyCell);
+                            if (column.NumericValue is not null)
+                            {
+                                cell = cell.AlignRight();
+                            }
+
+                            cell.Text(column.Display(record)).FontSize(4.5f);
+                        }
                     }
                 });
 
                 page.Footer().AlignRight().Text(text =>
                 {
-                    text.Span("Generated ").FontSize(8);
-                    text.Span(DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).FontSize(8);
+                    text.Span("Generated ").FontSize(5);
+                    text.Span(DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).FontSize(5);
                 });
             });
         }).GeneratePdf();
@@ -171,15 +183,33 @@ internal static class PayrollExportBuilder
             .BorderBottom(1)
             .BorderColor(Colors.Grey.Darken2)
             .Background(Colors.Grey.Lighten3)
-            .PaddingVertical(4)
-            .PaddingHorizontal(3);
+            .PaddingVertical(2)
+            .PaddingHorizontal(1);
 
     private static IContainer BodyCell(IContainer container) =>
         container
             .BorderBottom(0.5f)
             .BorderColor(Colors.Grey.Lighten2)
-            .PaddingVertical(3)
-            .PaddingHorizontal(3);
+            .PaddingVertical(1.5f)
+            .PaddingHorizontal(1);
+
+    private static ExportColumn Text(
+        string header,
+        Func<PayrollDto, string> value,
+        float relativeWidth = 1f) =>
+        new(header, value, null, false, relativeWidth);
+
+    private static ExportColumn Number(
+        string header,
+        Func<PayrollDto, decimal> value,
+        float relativeWidth = 1f) =>
+        new(header, record => FormatNumber(value(record)), value, false, relativeWidth);
+
+    private static ExportColumn Money(
+        string header,
+        Func<PayrollDto, decimal> value,
+        float relativeWidth = 1f) =>
+        new(header, record => FormatAmount(value(record)), value, true, relativeWidth);
 
     private static string FormatAmount(decimal value) =>
         value.ToString("F2", CultureInfo.InvariantCulture);
@@ -199,4 +229,11 @@ internal static class PayrollExportBuilder
 
         return value;
     }
+
+    private sealed record ExportColumn(
+        string Header,
+        Func<PayrollDto, string> Display,
+        Func<PayrollDto, decimal>? NumericValue,
+        bool IsMoney,
+        float RelativeWidth);
 }

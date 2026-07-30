@@ -8,6 +8,8 @@ public class PayrollDto
     public string EmployeeName { get; set; } = string.Empty;
     public string EmployeeCode { get; set; } = string.Empty;
     public string? Position { get; set; }
+    /// <summary>Employee email address; populated when enriching payroll summary for payslip actions.</summary>
+    public string? Email { get; set; }
     public SalaryType SalaryType { get; set; }
     public decimal BasicSalary { get; set; }
     public decimal MonthlySalary { get; set; }

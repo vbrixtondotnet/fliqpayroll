@@ -620,22 +620,43 @@
         ].join("");
     }
 
-    function absentDaysCell(record) {
+    function readonlyNumber(value, fieldName) {
+        return [
+            '<td class="text-end payroll-v2-readonly" data-field="',
+            fieldName,
+            '">',
+            formatNumber(value),
+            "</td>"
+        ].join("");
+    }
+
+    function absentDaysCell(record, isFixed) {
+        if (isFixed) {
+            return readonlyNumber(0, "absentDays");
+        }
+
         var days = record.AbsentDays || 0;
         var formatted = formatNumber(days);
         var dates = record.AbsentDates || [];
 
-        if (days <= 0 || dates.length === 0) {
-            return '<td class="text-end payroll-v2-readonly" data-field="absentDays">' + formatted + "</td>";
-        }
-
         return [
-            '<td class="text-end payroll-v2-absent-days" data-field="absentDays">',
-            '<button type="button" class="btn btn-link btn-sm p-0 payroll-v2-absent-link" data-absent-dates=\'',
-            JSON.stringify(dates),
-            '\' title="View absent dates">',
+            '<td class="payroll-v2-editable payroll-v2-absent-days">',
+            '<div class="d-flex align-items-center gap-1">',
+            '<input type="text" class="form-control form-control-sm payroll-v2-input text-end" ',
+            'data-validate="number" data-field="absentDays" value="',
             formatted,
-            "</button>",
+            '" inputmode="decimal" autocomplete="off" aria-label="Absent days" />',
+            dates.length > 0
+                ? [
+                    '<button type="button" class="btn btn-link btn-sm p-0 payroll-v2-absent-link flex-shrink-0" ',
+                    'data-absent-dates=\'',
+                    JSON.stringify(dates),
+                    '\' title="View calculated absent dates" aria-label="View calculated absent dates">',
+                    '<span aria-hidden="true">View</span>',
+                    "</button>"
+                ].join("")
+                : "",
+            "</div>",
             "</td>"
         ].join("");
     }
@@ -695,8 +716,8 @@
     }
 
     function renderRow(record) {
-        var isDaily = record.SalaryType === 1;
-        var isFixed = record.SalaryType === 2;
+        var isDaily = record.SalaryType === 1 || record.SalaryType === "Daily";
+        var isFixed = record.SalaryType === 2 || record.SalaryType === "Fixed";
         var dailyRate = isDaily ? record.BasicSalary : record.DailyRate;
         var holidayOtPay = isFixed ? 0 : (record.HolidayOtPay || 0);
         var specialOtPay = isFixed ? 0 : (record.SpecialOtPay || 0);
@@ -721,9 +742,11 @@
             readonlyMoney(isDaily ? null : record.BiMonthlySalary, "", "", "biMonthlySalary"),
             readonlyMoney(dailyRate, "", "", "dailyRate"),
             readonlyMoney(record.HourlyRate, "", "", "hourlyRate"),
-            editableInput(record.WorkingDays, "number", "workingDays"),
-            absentDaysCell(record),
-            readonlyMoney(record.AbsentAmount, "", "", "absentAmount"),
+            isFixed
+                ? readonlyNumber(0, "workingDays")
+                : editableInput(record.WorkingDays, "number", "workingDays"),
+            absentDaysCell(record, isFixed),
+            readonlyMoney(isFixed ? 0 : record.AbsentAmount, "", "", "absentAmount"),
             readonlyMoney(record.GrossSalary, "fw-semibold", "", "grossSalary"),
             editableInput(record.RegularOtRate, "rate", "regularOtRate"),
             editableInput(record.RegularOtHours, "number", "regularOtHours"),

@@ -180,7 +180,7 @@ public class PayrollService : IPayrollService
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
-        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        var data = await GetExportDataAsync(fromDate, toDate, cancellationToken);
         return PayrollExportBuilder.BuildExcel(data);
     }
 
@@ -189,7 +189,7 @@ public class PayrollService : IPayrollService
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
-        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        var data = await GetExportDataAsync(fromDate, toDate, cancellationToken);
         return PayrollExportBuilder.BuildCsv(data);
     }
 
@@ -198,7 +198,20 @@ public class PayrollService : IPayrollService
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
-        var data = await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
+        var data = await GetExportDataAsync(fromDate, toDate, cancellationToken);
         return PayrollExportBuilder.BuildPdf(data);
+    }
+
+    private async Task<PayrollByDateRangeDto> GetExportDataAsync(
+        DateTime fromDate,
+        DateTime toDate,
+        CancellationToken cancellationToken)
+    {
+        var saved = await _payrollPeriodRepository.GetSavedByDateRangeAsync(
+            fromDate,
+            toDate,
+            cancellationToken);
+
+        return saved ?? await GetByDateRangeAsync(fromDate, toDate, cancellationToken);
     }
 }
