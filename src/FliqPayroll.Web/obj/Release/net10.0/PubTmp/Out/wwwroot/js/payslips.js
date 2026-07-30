@@ -10,6 +10,10 @@
         },
         allPayslipsPdf: function (payrollPeriodId) {
             return "/api/reports/payslip/pdf/all?payrollPeriodId=" + payrollPeriodId;
+        },
+        emailPayslip: function (employeeId, payrollPeriodId) {
+            return "/api/reports/payslip/email?employeeId=" + employeeId +
+                "&payrollPeriodId=" + payrollPeriodId;
         }
     };
 
@@ -29,11 +33,18 @@
     }
 
     function showError(message) {
+        $("#payslips-success").addClass("d-none").text("");
         $("#payslips-alert").removeClass("d-none").text(message);
     }
 
-    function hideError() {
+    function showSuccess(message) {
         $("#payslips-alert").addClass("d-none").text("");
+        $("#payslips-success").removeClass("d-none").text(message);
+    }
+
+    function hideAlerts() {
+        $("#payslips-alert").addClass("d-none").text("");
+        $("#payslips-success").addClass("d-none").text("");
     }
 
     function setGenerateEnabled(isEnabled) {
@@ -91,13 +102,37 @@
                     return;
                 }
 
-                hideError();
+                hideAlerts();
                 populatePeriodSelect(response.Data || []);
             })
             .fail(function () {
                 showError("Failed to load saved payroll periods.");
                 populatePeriodSelect([]);
             });
+    }
+
+    function buildEmailButton(record) {
+        var hasEmail = !!(record.Email && String(record.Email).trim());
+        if (hasEmail) {
+            return '<button type="button" class="btn btn-sm btn-outline-secondary payslip-email-btn" ' +
+                'data-employee-id="' + record.EmployeeId + '">Email Payslip</button>';
+        }
+
+        return '<span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" ' +
+            'data-bs-title="Missing Email Address">' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary" disabled ' +
+            'style="pointer-events: none;">Email Payslip</button>' +
+            "</span>";
+    }
+
+    function initTooltips($root) {
+        if (!window.bootstrap || !bootstrap.Tooltip) {
+            return;
+        }
+
+        $root.find('[data-bs-toggle="tooltip"]').each(function () {
+            bootstrap.Tooltip.getOrCreateInstance(this);
+        });
     }
 
     function renderSummary(report) {
@@ -124,12 +159,16 @@
                 "<td>", formatCurrency(record.GrossPay), "</td>",
                 "<td>", formatCurrency(record.TotalDeductions), "</td>",
                 "<td><strong>", formatCurrency(record.NetPay), "</strong></td>",
-                '<td><a href="' + api.payslipPdf(record.EmployeeId, selectedPeriodId) +
-                '" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">PDF</a></td>',
+                '<td><div class="d-flex flex-wrap gap-1">',
+                '<a href="' + api.payslipPdf(record.EmployeeId, selectedPeriodId) +
+                '" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">PDF</a>',
+                buildEmailButton(record),
+                "</div></td>",
                 "</tr>"
             ].join(""));
         });
 
+        initTooltips($body);
         hasGeneratedRecords = true;
         setDownloadAllVisible(true);
     }
@@ -140,7 +179,7 @@
             return;
         }
 
-        hideError();
+        hideAlerts();
         setGenerateEnabled(false);
         setDownloadAllVisible(false);
 
@@ -166,6 +205,40 @@
             });
     }
 
+    function emailPayslip(employeeId, $button) {
+        if (!selectedPeriodId || !employeeId) {
+            showError("Select a saved payroll period.");
+            return;
+        }
+
+        hideAlerts();
+        $button.prop("disabled", true).text("Sending...");
+
+        $.ajax({
+            url: api.emailPayslip(employeeId, selectedPeriodId),
+            method: "POST"
+        })
+            .done(function (response) {
+                if (!response || !response.Success) {
+                    showError((response && response.Message) || "Failed to email payslip.");
+                    return;
+                }
+
+                showSuccess((response && response.Message) || "Payslip emailed successfully.");
+            })
+            .fail(function (xhr) {
+                var message = "Failed to email payslip.";
+                if (xhr.responseJSON && xhr.responseJSON.Message) {
+                    message = xhr.responseJSON.Message;
+                }
+
+                showError(message);
+            })
+            .always(function () {
+                $button.prop("disabled", false).text("Email Payslip");
+            });
+    }
+
     $(function () {
         resetSummary();
         loadSavedPeriods();
@@ -174,6 +247,7 @@
             selectedPeriodId = $(this).val() || null;
             setGenerateEnabled(!!selectedPeriodId);
             resetSummary();
+            hideAlerts();
             $("#payslips-body").html(
                 '<tr><td colspan="7" class="text-center text-muted py-4">Select a saved payroll period and generate payslips.</td></tr>'
             );
@@ -186,6 +260,12 @@
                 event.preventDefault();
                 showError("Generate payslips before downloading all.");
             }
+        });
+
+        $("#payslips-body").on("click", ".payslip-email-btn", function () {
+            var $button = $(this);
+            var employeeId = parseInt($button.attr("data-employee-id"), 10);
+            emailPayslip(employeeId, $button);
         });
     });
 })(jQuery);
