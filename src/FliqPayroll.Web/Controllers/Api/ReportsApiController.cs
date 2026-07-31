@@ -1,49 +1,31 @@
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Utilities;
 using FliqPayroll.Services.Interfaces;
+using FliqPayroll.Web.Jobs;
 using FliqPayroll.Web.Services;
-
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
-
 using Microsoft.AspNetCore.Mvc;
-
-
 
 namespace FliqPayroll.Web.Controllers.Api;
 
-
-
 [ApiController]
-
 [Route("api/reports")]
-
 [AllowAnonymous]
-
 public class ReportsApiController : ControllerBase
-
 {
-
     private readonly IReportService _reportService;
-
     private readonly PayslipPdfService _payslipPdfService;
-
-    private readonly IPayslipEmailService _payslipEmailService;
-
-
+    private readonly IBackgroundJobClient _backgroundJobs;
 
     public ReportsApiController(
         IReportService reportService,
         PayslipPdfService payslipPdfService,
-        IPayslipEmailService payslipEmailService)
-
+        IBackgroundJobClient backgroundJobs)
     {
-
         _reportService = reportService;
-
         _payslipPdfService = payslipPdfService;
-
-        _payslipEmailService = payslipEmailService;
-
+        _backgroundJobs = backgroundJobs;
     }
 
 
@@ -223,8 +205,41 @@ public class ReportsApiController : ControllerBase
     {
         try
         {
-            await _payslipEmailService.SendPayslipEmailAsync(employeeId, payrollPeriodId, cancellationToken);
-            return Ok(ApiResult<object>.Ok(new { }, "Payslip emailed successfully."));
+            if (employeeId <= 0 || payrollPeriodId <= 0)
+            {
+                return BadRequest(ApiResult<object>.Fail("Employee id and payroll period id are required."));
+            }
+
+            // Fast pre-checks so the UI gets immediate feedback for missing data,
+            // while PDF generation + SMTP run in Hangfire.
+            var summary = await _reportService.GetPayrollSummaryByPeriodIdAsync(
+                payrollPeriodId,
+                cancellationToken);
+
+            var record = summary.Records.FirstOrDefault(r => r.EmployeeId == employeeId);
+            if (record is null)
+            {
+                return NotFound(ApiResult<object>.Fail(
+                    "Payslip not found for the selected employee and payroll period."));
+            }
+
+            if (record.PayslipEmailSent)
+            {
+                return BadRequest(ApiResult<object>.Fail(
+                    "Payslip already emailed for this payroll period."));
+            }
+
+            if (string.IsNullOrWhiteSpace(record.Email))
+            {
+                return BadRequest(ApiResult<object>.Fail("Missing Email Address"));
+            }
+
+            var jobId = _backgroundJobs.Enqueue<PayslipEmailJobs>(
+                job => job.SendPayslipEmailAsync(employeeId, payrollPeriodId));
+
+            return Ok(ApiResult<object>.Ok(
+                new { JobId = jobId },
+                "Payslip email has been queued and will be sent shortly."));
         }
         catch (ArgumentException ex)
         {
@@ -232,18 +247,13 @@ public class ReportsApiController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-            {
-                return NotFound(ApiResult<object>.Fail(ex.Message));
-            }
-
             return BadRequest(ApiResult<object>.Fail(ex.Message));
         }
         catch (Exception)
         {
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
-                ApiResult<object>.Fail("Failed to send payslip email."));
+                ApiResult<object>.Fail("Failed to queue payslip email."));
         }
     }
 

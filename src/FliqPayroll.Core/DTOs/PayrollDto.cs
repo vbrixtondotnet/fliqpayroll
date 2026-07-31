@@ -10,6 +10,10 @@ public class PayrollDto
     public string? Position { get; set; }
     /// <summary>Employee email address; populated when enriching payroll summary for payslip actions.</summary>
     public string? Email { get; set; }
+    /// <summary>True when a payslip email has already been sent for this employee and period.</summary>
+    public bool PayslipEmailSent { get; set; }
+    /// <summary>UTC timestamp when the payslip email was sent, if any.</summary>
+    public DateTime? PayslipEmailSentAt { get; set; }
     public SalaryType SalaryType { get; set; }
     public decimal BasicSalary { get; set; }
     public decimal MonthlySalary { get; set; }

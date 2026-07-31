@@ -112,6 +112,10 @@ While the consent screen's publishing status is **Testing**, Google expires refr
 On the Payslips page, use **Email Payslip** beside each PDF button. The button is disabled with
 tooltip **Missing Email Address** when the employee has no email on file.
 
+Email sending runs in the background via **Hangfire** (SQL Server storage on `DefaultConnection`).
+The API validates the employee/email and enqueues a job immediately; PDF generation and SMTP happen
+asynchronously with up to 3 automatic retries. Monitor jobs at `/hangfire`.
+
 ## API endpoints
 
 | Method | Route | Description |

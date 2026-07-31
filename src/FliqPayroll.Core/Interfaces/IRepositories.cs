@@ -91,6 +91,8 @@ public interface IPayrollPeriodRepository
     Task<PayrollByDateRangeDto?> GetSavedByDateRangeAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
     Task<PayrollByDateRangeDto?> GetSavedByIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SavePayrollPeriodResultDto>> GetAllSavedPeriodsAsync(CancellationToken cancellationToken = default);
+    /// <summary>Marks the payroll record as having had its payslip emailed. Returns false if the record was not found.</summary>
+    Task<bool> MarkPayslipEmailSentAsync(int employeeId, int payrollPeriodId, CancellationToken cancellationToken = default);
 }
 
 

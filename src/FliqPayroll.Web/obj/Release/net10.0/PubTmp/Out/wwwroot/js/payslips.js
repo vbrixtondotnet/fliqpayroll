@@ -112,15 +112,20 @@
     }
 
     function buildEmailButton(record) {
+        if (record.PayslipEmailSent) {
+            return '<button type="button" class="btn btn-sm btn-success" disabled ' +
+                'style="pointer-events: none;">Email Sent</button>';
+        }
+
         var hasEmail = !!(record.Email && String(record.Email).trim());
         if (hasEmail) {
-            return '<button type="button" class="btn btn-sm btn-outline-secondary payslip-email-btn" ' +
+            return '<button type="button" class="btn btn-sm btn-outline-success payslip-email-btn" ' +
                 'data-employee-id="' + record.EmployeeId + '">Email Payslip</button>';
         }
 
         return '<span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" ' +
             'data-bs-title="Missing Email Address">' +
-            '<button type="button" class="btn btn-sm btn-outline-secondary" disabled ' +
+            '<button type="button" class="btn btn-sm btn-outline-success" disabled ' +
             'style="pointer-events: none;">Email Payslip</button>' +
             "</span>";
     }
@@ -212,7 +217,7 @@
         }
 
         hideAlerts();
-        $button.prop("disabled", true).text("Sending...");
+        $button.prop("disabled", true).text("Queuing...");
 
         $.ajax({
             url: api.emailPayslip(employeeId, selectedPeriodId),
@@ -220,21 +225,27 @@
         })
             .done(function (response) {
                 if (!response || !response.Success) {
-                    showError((response && response.Message) || "Failed to email payslip.");
+                    showError((response && response.Message) || "Failed to queue payslip email.");
+                    $button.prop("disabled", false).text("Email Payslip");
                     return;
                 }
 
-                showSuccess((response && response.Message) || "Payslip emailed successfully.");
+                showSuccess((response && response.Message) || "Payslip email has been queued and will be sent shortly.");
+
+                // Refresh the list shortly so the button flips to Email Sent after Hangfire finishes.
+                setTimeout(function () {
+                    if (selectedPeriodId) {
+                        generatePayslips();
+                    }
+                }, 5000);
             })
             .fail(function (xhr) {
-                var message = "Failed to email payslip.";
+                var message = "Failed to queue payslip email.";
                 if (xhr.responseJSON && xhr.responseJSON.Message) {
                     message = xhr.responseJSON.Message;
                 }
 
                 showError(message);
-            })
-            .always(function () {
                 $button.prop("disabled", false).text("Email Payslip");
             });
     }

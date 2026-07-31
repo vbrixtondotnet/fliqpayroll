@@ -29,6 +29,12 @@ public class PayrollPeriodRepository : IPayrollPeriodRepository
                 p => p.StartDate == startDate && p.EndDate == endDate,
                 cancellationToken);
 
+        // Preserve email-sent timestamps across re-save (records are wiped and re-inserted).
+        var preservedEmailSentAt = period?.PayrollRecords
+            .Where(r => r.PayslipEmailSentAt.HasValue)
+            .ToDictionary(r => r.EmployeeId, r => r.PayslipEmailSentAt)
+            ?? new Dictionary<int, DateTime?>();
+
         if (period is null)
         {
             period = new PayrollPeriod
@@ -56,7 +62,19 @@ public class PayrollPeriodRepository : IPayrollPeriodRepository
 
         foreach (var record in request.Records)
         {
-            period.PayrollRecords.Add(MapToEntity(record, period.Id));
+            var entity = MapToEntity(record, period.Id);
+
+            if (preservedEmailSentAt.TryGetValue(record.EmployeeId, out var preservedSentAt)
+                && preservedSentAt.HasValue)
+            {
+                entity.PayslipEmailSentAt = preservedSentAt;
+            }
+            else if (record.PayslipEmailSentAt.HasValue)
+            {
+                entity.PayslipEmailSentAt = record.PayslipEmailSentAt;
+            }
+
+            period.PayrollRecords.Add(entity);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -121,6 +139,27 @@ public class PayrollPeriodRepository : IPayrollPeriodRepository
                 RecordCount = p.PayrollRecords.Count
             })
             .ToList();
+    }
+
+    public async Task<bool> MarkPayslipEmailSentAsync(
+        int employeeId,
+        int payrollPeriodId,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await _context.PayrollRecords
+            .FirstOrDefaultAsync(
+                r => r.EmployeeId == employeeId && r.PayrollPeriodId == payrollPeriodId,
+                cancellationToken);
+
+        if (record is null)
+        {
+            return false;
+        }
+
+        record.PayslipEmailSentAt = DateTime.UtcNow;
+        record.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private static PayrollByDateRangeDto MapPeriodToDto(PayrollPeriod period) => new()
@@ -194,6 +233,7 @@ public class PayrollPeriodRepository : IPayrollPeriodRepository
         NetPay = dto.NetPay,
         PaymentMethod = dto.PaymentMethod,
         Status = dto.Status,
+        PayslipEmailSentAt = dto.PayslipEmailSentAt,
         IsLocked = false,
         CreatedAt = DateTime.UtcNow
     };
@@ -256,6 +296,8 @@ public class PayrollPeriodRepository : IPayrollPeriodRepository
         TotalDeductions = entity.TotalDeductions,
         NetPay = entity.NetPay,
         PaymentMethod = entity.PaymentMethod,
-        Status = entity.Status
+        Status = entity.Status,
+        PayslipEmailSentAt = entity.PayslipEmailSentAt,
+        PayslipEmailSent = entity.PayslipEmailSentAt.HasValue
     };
 }

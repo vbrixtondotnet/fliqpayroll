@@ -4,7 +4,10 @@ using FliqPayroll.Data;
 using FliqPayroll.Data.Entities;
 using FliqPayroll.Services;
 using FliqPayroll.Web;
+using FliqPayroll.Web.Jobs;
 using FliqPayroll.Web.Services;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
@@ -23,6 +26,27 @@ builder.Services.AddFliqPayrollData(connectionString);
 builder.Services.AddFliqPayrollServices(builder.Configuration);
 builder.Services.AddScoped<PayslipPdfService>();
 builder.Services.AddScoped<IPayslipDocumentGenerator>(sp => sp.GetRequiredService<PayslipPdfService>());
+builder.Services.AddScoped<PayslipEmailJobs>();
+
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        QueuePollInterval = TimeSpan.Zero,
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true,
+        PrepareSchemaIfNecessary = true
+    }));
+
+builder.Services.AddHangfireServer(options =>
+{
+    options.WorkerCount = Math.Max(Environment.ProcessorCount, 2);
+    options.Queues = ["default"];
+});
 
 var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
 Directory.CreateDirectory(dataProtectionKeysPath);
@@ -68,6 +92,12 @@ if (!app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireAuthorizationFilter()],
+    DashboardTitle = "FliqPayroll Jobs"
+});
 
 app.MapStaticAssets();
 app.MapControllerRoute(

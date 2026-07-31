@@ -64,6 +64,8 @@ public class PayrollRecord
     public string? PaymentMethod { get; set; }
     public PayrollStatus Status { get; set; } = PayrollStatus.Calculated;
     public bool IsLocked { get; set; }
+    /// <summary>UTC time the Employee Copy payslip was emailed for this period; null if not yet sent.</summary>
+    public DateTime? PayslipEmailSentAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

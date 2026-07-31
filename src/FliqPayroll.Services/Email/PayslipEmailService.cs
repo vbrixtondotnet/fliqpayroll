@@ -11,17 +11,20 @@ public class PayslipEmailService : IPayslipEmailService
     private readonly IReportService _reportService;
     private readonly IPayslipDocumentGenerator _documentGenerator;
     private readonly IEmailSender _emailSender;
+    private readonly IPayrollPeriodRepository _payrollPeriodRepository;
     private readonly ILogger<PayslipEmailService> _logger;
 
     public PayslipEmailService(
         IReportService reportService,
         IPayslipDocumentGenerator documentGenerator,
         IEmailSender emailSender,
+        IPayrollPeriodRepository payrollPeriodRepository,
         ILogger<PayslipEmailService> logger)
     {
         _reportService = Guard.AgainstNull(reportService, nameof(reportService));
         _documentGenerator = Guard.AgainstNull(documentGenerator, nameof(documentGenerator));
         _emailSender = Guard.AgainstNull(emailSender, nameof(emailSender));
+        _payrollPeriodRepository = Guard.AgainstNull(payrollPeriodRepository, nameof(payrollPeriodRepository));
         _logger = Guard.AgainstNull(logger, nameof(logger));
     }
 
@@ -44,6 +47,17 @@ public class PayslipEmailService : IPayslipEmailService
         if (payslip is null)
         {
             throw new InvalidOperationException("Payslip not found for the selected employee and payroll period.");
+        }
+
+        var savedPeriod = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
+        var savedRecord = savedPeriod?.Records.FirstOrDefault(r => r.EmployeeId == employeeId);
+        if (savedRecord?.PayslipEmailSent == true)
+        {
+            _logger.LogInformation(
+                "Payslip email already sent for employee {EmployeeId}, period {PayrollPeriodId}; skipping.",
+                employeeId,
+                payrollPeriodId);
+            return;
         }
 
         var email = payslip.Employee.Email?.Trim();
@@ -99,6 +113,20 @@ public class PayslipEmailService : IPayslipEmailService
                 ]
             },
             cancellationToken);
+
+        var marked = await _payrollPeriodRepository.MarkPayslipEmailSentAsync(
+            employeeId,
+            payrollPeriodId,
+            cancellationToken);
+
+        if (!marked)
+        {
+            _logger.LogWarning(
+                "Payslip emailed to {Email} but could not mark PayrollRecord as sent for employee {EmployeeId}, period {PayrollPeriodId}.",
+                email,
+                employeeId,
+                payrollPeriodId);
+        }
 
         _logger.LogInformation(
             "Payslip emailed to {Email} for employee {EmployeeId}, period {PayrollPeriodId}.",
