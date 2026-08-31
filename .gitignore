@@ -2,11 +2,25 @@
 # Visual Studio / .NET
 ################################################################################
 
-# Build outputs — ignore bin/ and obj/ under every project layer
+# Build outputs — ignore these folders under every project layer
 bin/
 obj/
+debug/
+Debug/
+release/
+Release/
 **/bin/
 **/obj/
+**/debug/
+**/Debug/
+**/release/
+**/Release/
+
+# All files inside obj/Debug and obj/Release in every project
+**/obj/Debug/**
+**/obj/Release/**
+**/obj/debug/**
+**/obj/release/**
 
 # Visual Studio
 .vs/
@@ -29,3 +43,4 @@ artifacts/
 **/App_Data/
 **/gmail-oauth.tokens
 **/DataProtection-Keys/
+/src/FliqPayroll.Core/obj/Release/net10.0/FliqPayroll.Core.csproj.CoreCompileInputs.cache
