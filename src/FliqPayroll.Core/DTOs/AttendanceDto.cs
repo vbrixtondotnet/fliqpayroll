@@ -26,15 +26,10 @@ public class AttendanceDto
         AttendancePolicyProcessor.IsPresent(TimeIn, TimeOut);
 
     public decimal HoursWorked =>
-        AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
-            TimeIn, TimeOut, out var effectiveIn, out var effectiveOut)
-            ? Math.Max(0m, Math.Round((decimal)(effectiveOut - effectiveIn).TotalHours, 2, MidpointRounding.AwayFromZero))
-            : 0m;
+        AttendancePolicyProcessor.CalculateHoursWorked(TimeIn, TimeOut);
 
     public decimal OvertimeHours =>
-        AttendancePolicyProcessor.TryGetOvertimeWindow(TimeOut, out var overtimeIn, out var overtimeOut)
-            ? Math.Round((decimal)(overtimeOut - overtimeIn).TotalHours, 2, MidpointRounding.AwayFromZero)
-            : 0m;
+        AttendancePolicyProcessor.CalculateOvertimeHours(TimeIn, TimeOut);
 
     public decimal LateMinutes =>
         AttendancePolicyProcessor.TryGetEffectiveTimeWindow(

@@ -363,8 +363,11 @@ public class AttendanceRepository : IAttendanceRepository
     {
         var timeIn = entity.TimeIn;
         var timeOut = entity.TimeOut;
+        var isNextDayTimeOut = AttendancePolicyProcessor.IsNextDayTimeOut(timeIn, timeOut);
         var hasValidOvertime = AttendancePolicyProcessor.TryGetOvertimeWindow(
+            timeIn,
             timeOut,
+            isNextDayTimeOut,
             out var overtimeIn,
             out var overtimeOut);
 

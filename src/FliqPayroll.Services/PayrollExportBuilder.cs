@@ -67,6 +67,12 @@ internal static class PayrollExportBuilder
             builder.AppendLine(string.Join(",", Columns.Select(column => CsvEscape(column.Display(record)))));
         }
 
+        var summary = GetSummary(data.Records);
+        builder.AppendLine();
+        builder.AppendLine($"Total Gross Pay: {FormatAmount(summary.TotalGrossPay)}");
+        builder.AppendLine($"Total Deductions: {FormatAmount(summary.TotalDeductions)}");
+        builder.AppendLine($"Total Net Pay: {FormatAmount(summary.TotalNetPay)}");
+
         return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(builder.ToString())).ToArray();
     }
 
@@ -117,6 +123,31 @@ internal static class PayrollExportBuilder
         worksheet.Range(4, 1, Math.Max(4, row - 1), Columns.Length).SetAutoFilter();
         worksheet.Columns().AdjustToContents();
 
+        var summary = GetSummary(data.Records);
+        var summaryLabelRow = row + 1;
+        var summaryValueRow = row + 2;
+        AddExcelSummaryCard(
+            worksheet,
+            summaryLabelRow,
+            summaryValueRow,
+            1,
+            "Total Gross Pay",
+            summary.TotalGrossPay);
+        AddExcelSummaryCard(
+            worksheet,
+            summaryLabelRow,
+            summaryValueRow,
+            3,
+            "Total Deductions",
+            summary.TotalDeductions);
+        AddExcelSummaryCard(
+            worksheet,
+            summaryLabelRow,
+            summaryValueRow,
+            5,
+            "Total Net Pay",
+            summary.TotalNetPay);
+
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return stream.ToArray();
@@ -124,6 +155,8 @@ internal static class PayrollExportBuilder
 
     public static byte[] BuildPdf(PayrollByDateRangeDto data)
     {
+        var summary = GetSummary(data.Records);
+
         return Document.Create(container =>
         {
             container.Page(page =>
@@ -139,34 +172,58 @@ internal static class PayrollExportBuilder
                     header.Item().PaddingBottom(5);
                 });
 
-                page.Content().Table(table =>
+                page.Content().Column(content =>
                 {
-                    table.ColumnsDefinition(columns =>
+                    content.Item().Table(table =>
                     {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            foreach (var column in Columns)
+                            {
+                                columns.RelativeColumn(column.RelativeWidth);
+                            }
+                        });
+
                         foreach (var column in Columns)
                         {
-                            columns.RelativeColumn(column.RelativeWidth);
+                            table.Cell().Element(HeaderCell).Text(column.Header).Bold().FontSize(4.5f);
+                        }
+
+                        foreach (var record in data.Records)
+                        {
+                            foreach (var column in Columns)
+                            {
+                                var cell = table.Cell().Element(BodyCell);
+                                if (column.NumericValue is not null)
+                                {
+                                    cell = cell.AlignRight();
+                                }
+
+                                cell.Text(column.Display(record)).FontSize(4.5f);
+                            }
                         }
                     });
 
-                    foreach (var column in Columns)
+                    content.Item().PaddingTop(8).Row(row =>
                     {
-                        table.Cell().Element(HeaderCell).Text(column.Header).Bold().FontSize(4.5f);
-                    }
-
-                    foreach (var record in data.Records)
-                    {
-                        foreach (var column in Columns)
+                        row.RelativeItem().Element(SummaryCard).Column(card =>
                         {
-                            var cell = table.Cell().Element(BodyCell);
-                            if (column.NumericValue is not null)
-                            {
-                                cell = cell.AlignRight();
-                            }
-
-                            cell.Text(column.Display(record)).FontSize(4.5f);
-                        }
-                    }
+                            card.Item().Text("Total Gross Pay").FontSize(5).FontColor(Colors.Grey.Darken1);
+                            card.Item().Text(FormatCurrency(summary.TotalGrossPay)).Bold().FontSize(8);
+                        });
+                        row.ConstantItem(6);
+                        row.RelativeItem().Element(SummaryCard).Column(card =>
+                        {
+                            card.Item().Text("Total Deductions").FontSize(5).FontColor(Colors.Grey.Darken1);
+                            card.Item().Text(FormatCurrency(summary.TotalDeductions)).Bold().FontSize(8);
+                        });
+                        row.ConstantItem(6);
+                        row.RelativeItem().Element(SummaryCard).Column(card =>
+                        {
+                            card.Item().Text("Total Net Pay").FontSize(5).FontColor(Colors.Grey.Darken1);
+                            card.Item().Text(FormatCurrency(summary.TotalNetPay)).Bold().FontSize(8);
+                        });
+                    });
                 });
 
                 page.Footer().AlignRight().Text(text =>
@@ -192,6 +249,68 @@ internal static class PayrollExportBuilder
             .BorderColor(Colors.Grey.Lighten2)
             .PaddingVertical(1.5f)
             .PaddingHorizontal(1);
+
+    private static IContainer SummaryCard(IContainer container) =>
+        container
+            .Border(0.5f)
+            .BorderColor(Colors.Grey.Lighten2)
+            .Background(Colors.Grey.Lighten4)
+            .PaddingVertical(5)
+            .PaddingHorizontal(7);
+
+    private static void AddExcelSummaryCard(
+        IXLWorksheet worksheet,
+        int labelRow,
+        int valueRow,
+        int firstColumn,
+        string label,
+        decimal value)
+    {
+        const int cardColumnSpan = 2;
+        const double minimumCardColumnWidth = 14;
+        var lastColumn = firstColumn + cardColumnSpan - 1;
+
+        for (var column = firstColumn; column <= lastColumn; column++)
+        {
+            if (worksheet.Column(column).Width < minimumCardColumnWidth)
+            {
+                worksheet.Column(column).Width = minimumCardColumnWidth;
+            }
+        }
+
+        var range = worksheet.Range(labelRow, firstColumn, valueRow, lastColumn);
+        range.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+        range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        range.Style.Border.OutsideBorderColor = XLColor.FromHtml("#E5E7EB");
+        range.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+        var labelRange = worksheet.Range(labelRow, firstColumn, labelRow, lastColumn).Merge();
+        labelRange.Value = label;
+        labelRange.Style.Font.FontSize = 9;
+        labelRange.Style.Font.FontColor = XLColor.FromHtml("#6B7280");
+        labelRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        labelRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Bottom;
+
+        var valueRange = worksheet.Range(valueRow, firstColumn, valueRow, lastColumn).Merge();
+        valueRange.Value = value;
+        valueRange.Style.Font.Bold = true;
+        valueRange.Style.Font.FontSize = 12;
+        valueRange.Style.NumberFormat.Format = "₱#,##0.00";
+        valueRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        valueRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+
+        worksheet.Row(labelRow).Height = 16;
+        worksheet.Row(valueRow).Height = 20;
+    }
+
+    private static PayrollSummary GetSummary(IReadOnlyList<PayrollDto> records) =>
+        new(
+            records.Sum(record => record.GrossPay),
+            records.Sum(record => record.TotalDeductions),
+            records.Sum(record => record.NetPay));
+
+    private static string FormatCurrency(decimal value) =>
+        $"₱{value.ToString("N2", CultureInfo.InvariantCulture)}";
 
     private static ExportColumn Text(
         string header,
@@ -236,4 +355,9 @@ internal static class PayrollExportBuilder
         Func<PayrollDto, decimal>? NumericValue,
         bool IsMoney,
         float RelativeWidth);
+
+    private sealed record PayrollSummary(
+        decimal TotalGrossPay,
+        decimal TotalDeductions,
+        decimal TotalNetPay);
 }

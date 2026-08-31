@@ -9,9 +9,16 @@ public static class AttendanceConstants
 
     public static readonly TimeSpan WorkStart = new(8, 0, 0);
     public static readonly TimeSpan WorkEnd = new(17, 0, 0);
-    /// <summary>Overtime starts only after two full hours beyond the 5:00 PM work end.</summary>
+    /// <summary>Overtime starts only after two full hours beyond the 5:00 PM work end (same-day logout).</summary>
     public static readonly TimeSpan OvertimeThreshold = new(19, 0, 0);
     public const decimal MinimumOvertimeHours = 2m;
+    /// <summary>Regular continuous hours before overnight OT applies.</summary>
+    public const decimal RegularHoursPerShift = 9m;
+    /// <summary>
+    /// Next-day Time Out punches at or before 6:00 AM are attributed to the previous workday.
+    /// After 6:00 AM, the previous day is treated as missing Time Out (Absent).
+    /// </summary>
+    public static readonly TimeSpan NextDayTimeOutGraceEnd = new(6, 0, 0);
     /// <summary>Grace period ends at 8:15 AM Philippine Time (UTC+8).</summary>
     public static readonly TimeSpan GracePeriodEnd = new(8, 15, 0);
     /// <summary>Late threshold starts at 8:16 AM Philippine Time (UTC+8).</summary>

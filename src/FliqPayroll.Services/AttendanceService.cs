@@ -106,32 +106,57 @@ public class AttendanceService : IAttendanceService
 
         var grouped = punches
             .GroupBy(p => new { p.EmployeeCode, Date = AttendanceDateHelper.ToCalendarDate(p.Date) })
-            .ToList();
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<BiometricCsvPunchDto>)g.ToList());
 
         var processedDays = 0;
         var skippedIncomplete = 0;
 
-        foreach (var group in grouped)
+        foreach (var employeeCode in grouped.Keys.Select(k => k.EmployeeCode).Distinct())
         {
-            if (!employeesByCode.TryGetValue(group.Key.EmployeeCode, out var employeeId))
+            if (!employeesByCode.TryGetValue(employeeCode, out var employeeId))
             {
                 continue;
             }
 
-            var processed = AttendancePolicyProcessor.ProcessDayPunches(
-                employeeId,
-                group.Key.EmployeeCode,
-                group.Key.Date,
-                group.ToList());
+            var employeeDates = grouped.Keys
+                .Where(k => k.EmployeeCode == employeeCode)
+                .Select(k => k.Date)
+                .OrderBy(d => d)
+                .ToList();
 
-            if (processed is null)
+            foreach (var date in employeeDates)
             {
-                skippedIncomplete++;
-                continue;
-            }
+                var dayKey = new { EmployeeCode = employeeCode, Date = date };
+                var dayPunches = grouped[dayKey];
 
-            await _attendanceRepository.UpsertBiometricAsync(processed, cancellationToken);
-            processedDays++;
+                // Early-morning Time Outs (≤ 6:00 AM) with no Time In belong to the previous workday.
+                if (AttendancePolicyProcessor.IsGracePeriodTimeOutOnlyDay(dayPunches))
+                {
+                    continue;
+                }
+
+                grouped.TryGetValue(
+                    new { EmployeeCode = employeeCode, Date = date.AddDays(1) },
+                    out var nextDayPunches);
+
+                var processed = AttendancePolicyProcessor.ProcessDayPunches(
+                    employeeId,
+                    employeeCode,
+                    date,
+                    dayPunches,
+                    nextDayPunches);
+
+                if (processed is null)
+                {
+                    skippedIncomplete++;
+                    continue;
+                }
+
+                await _attendanceRepository.UpsertBiometricAsync(processed, cancellationToken);
+                processedDays++;
+            }
         }
 
         var uploadId = await _attendanceRepository.SaveUploadLogAsync(
