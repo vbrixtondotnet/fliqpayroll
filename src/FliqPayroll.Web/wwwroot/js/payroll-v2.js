@@ -6,6 +6,15 @@
         defaultPeriod: "/api/payroll/defaultPeriod",
         savePeriod: "/api/payroll/savePeriod",
         employees: "/api/employees",
+        auditTrail: function (periodId) {
+            return "/api/payroll-approvals/period/" + periodId;
+        },
+        approveChange: function (id) {
+            return "/api/payroll-approvals/" + id + "/approve";
+        },
+        rejectChange: function (id) {
+            return "/api/payroll-approvals/" + id + "/reject";
+        },
         exportExcel: function (from, to) {
             return "/api/payroll/export/excel?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to);
         },
@@ -29,6 +38,10 @@
     let payrollGenerated = false;
     let allPayrollRecords = [];
     let employeeFilterOptions = [];
+    let currentPeriodId = null;
+    let reviewingChange = null;
+    const canApprove = $("#payroll-v2-config").data("can-approve") === true ||
+        $("#payroll-v2-config").attr("data-can-approve") === "true";
 
     function getSelectedEmployeeId() {
         var value = $("#payroll-v2-employee-filter-value").val();
@@ -410,6 +423,7 @@
                 getFieldValue($row, "holidayDays"),
                 getFieldValue($row, "holidayOtRate"),
                 parseFloat($row.data("regular-holiday-absent-count")) || 0));
+        // Night differential: Hourly Rate × 20% × hours between 10:00 PM and 6:00 AM.
         var nightDiffOtPay = roundMoney(
             getFieldValue($row, "nightDiffHours") * hourlyRate * getFieldValue($row, "nightDiffOtRate"));
         var leavePay = roundMoney(getFieldValue($row, "leaveDays") * dailyRate);
@@ -446,6 +460,238 @@
         setFieldValue($row, "netPay", netPay, "money");
     }
 
+    function snapshotInputs($row) {
+        var snapshot = {};
+        $row.find(".payroll-v2-input").each(function () {
+            snapshot[$(this).attr("data-field")] = parseNumber($(this).val());
+        });
+        return snapshot;
+    }
+
+    function differsFromBaseline($row) {
+        var baseline = $row.data("baseline");
+        if (!baseline) {
+            return false;
+        }
+
+        var current = snapshotInputs($row);
+        return Object.keys(current).some(function (key) {
+            return Math.abs((current[key] || 0) - (baseline[key] || 0)) > 0.0001;
+        });
+    }
+
+    // Marks a row as pending approval (with its View changes button) the moment it is edited,
+    // then queues an auto-save. Saved periods only: the very first save of a period creates it.
+    function refreshEditedState($row) {
+        if (!currentPeriodId || !$row.data("baseline")) {
+            return;
+        }
+
+        var wasDirty = !!$row.data("dirty");
+        var edited = differsFromBaseline($row);
+        $row.data("dirty", edited);
+
+        // Rows the server already holds as pending stay highlighted; only locally-edited rows toggle.
+        if (!$row.attr("data-change-id")) {
+            $row.toggleClass("payroll-v2-row-pending", edited);
+
+            // Add/remove only when the state flips; re-creating the button on every keystroke or blur
+            // would swallow a click that is in progress.
+            var hasWrap = $row.find(".payroll-v2-edited-wrap").length > 0;
+            if (edited && !hasWrap) {
+                $row.find(".payroll-v2-employee-name").append(
+                    '<span class="payroll-v2-edited-wrap">' + pendingBadge({ HasPendingApproval: true }) + "</span>");
+            } else if (!edited && hasWrap) {
+                $row.find(".payroll-v2-edited-wrap").remove();
+            }
+        }
+
+        if (edited || wasDirty) {
+            scheduleAutoSave();
+        }
+    }
+
+    // ---------- Auto-save ----------
+    var autoSaveTimer = null;
+    var autoSaving = false;
+    var autoSaveQueued = false;
+    var autoSaveCallbacks = [];
+    var AUTOSAVE_DELAY_MS = 1000;
+
+    function setAutoSaveStatus(kind, text) {
+        var classes = { saving: "text-muted", saved: "text-success", error: "text-danger", dirty: "text-warning" };
+        $("#payroll-v2-autosave-status")
+            .removeClass("d-none text-muted text-success text-danger text-warning")
+            .addClass(classes[kind] || "text-muted")
+            .text(text);
+    }
+
+    function scheduleAutoSave() {
+        if (!currentPeriodId || !payrollGenerated) {
+            return;
+        }
+
+        setAutoSaveStatus("dirty", "Unsaved changes...");
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(function () { runAutoSave(); }, AUTOSAVE_DELAY_MS);
+    }
+
+    function collectDirtyPayload() {
+        var records = [];
+        var sentRows = [];
+
+        $("#payroll-v2-body tr").each(function () {
+            var $row = $(this);
+            if (!getEmployeeId($row) || !$row.data("dirty")) {
+                return;
+            }
+
+            records.push(collectRowPayload($row));
+            sentRows.push({ $row: $row, snapshot: snapshotInputs($row) });
+        });
+
+        return { records: records, sentRows: sentRows };
+    }
+
+    function finishAutoSave() {
+        var callbacks = autoSaveCallbacks;
+        autoSaveCallbacks = [];
+        callbacks.forEach(function (callback) { callback(); });
+    }
+
+    function runAutoSave(callback) {
+        clearTimeout(autoSaveTimer);
+
+        if (callback) {
+            autoSaveCallbacks.push(callback);
+        }
+
+        if (!currentPeriodId || !payrollGenerated) {
+            finishAutoSave();
+            return;
+        }
+
+        if (autoSaving) {
+            autoSaveQueued = true;
+            return;
+        }
+
+        if ($("#payroll-v2-body .payroll-v2-input.is-invalid").length > 0) {
+            setAutoSaveStatus("error", "Fix the highlighted values to auto-save.");
+            finishAutoSave();
+            return;
+        }
+
+        var dirty = collectDirtyPayload();
+        if (dirty.records.length === 0) {
+            // Edits were typed back to their original values: nothing to save.
+            if (/^Unsaved/.test($("#payroll-v2-autosave-status").text())) {
+                $("#payroll-v2-autosave-status").addClass("d-none").text("");
+            }
+            finishAutoSave();
+            return;
+        }
+
+        var range = getDateRange();
+        autoSaving = true;
+        setAutoSaveStatus("saving", "Saving...");
+
+        $.ajax({
+            url: api.savePeriod,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                FromDate: range.fromDate,
+                ToDate: range.toDate,
+                PeriodName: currentPeriodName || $("#payroll-v2-period-label").text(),
+                Records: dirty.records
+            })
+        })
+            .then(function (response) {
+                if (!response || !response.Success) {
+                    setAutoSaveStatus("error", (response && response.Message) || "Auto-save failed.");
+                    return;
+                }
+
+                // What was sent is now stored; further edits are compared against it.
+                dirty.sentRows.forEach(function (sent) {
+                    sent.$row.data("baseline", sent.snapshot);
+                    if (differsFromBaseline(sent.$row)) {
+                        sent.$row.data("dirty", true);
+                        autoSaveQueued = true;
+                    } else {
+                        sent.$row.data("dirty", false);
+                    }
+                });
+
+                return syncPendingState().done(function () {
+                    setAutoSaveStatus("saved", "All changes saved" +
+                        (response.Data && response.Data.PendingApprovalCount ? " \u2022 awaiting approval" : ""));
+                });
+            })
+            .fail(function (xhr) {
+                if (xhr.status === 401) {
+                    return;
+                }
+
+                setAutoSaveStatus("error", getAjaxErrorMessage(xhr, "Auto-save failed. It will retry on your next change."));
+            })
+            .always(function () {
+                autoSaving = false;
+
+                if (autoSaveQueued) {
+                    autoSaveQueued = false;
+                    runAutoSave();
+                    return;
+                }
+
+                finishAutoSave();
+            });
+    }
+
+    // Pulls the server's pending requests and refreshes badges/buttons without re-rendering the table.
+    function syncPendingState() {
+        return $.getJSON(api.auditTrail(currentPeriodId), { pendingOnly: true })
+            .done(function (response) {
+                var latest = {};
+                ((response && response.Data) || []).forEach(function (request) {
+                    if (!latest[request.EmployeeId] || latest[request.EmployeeId] < request.Id) {
+                        latest[request.EmployeeId] = request.Id;
+                    }
+                });
+
+                var count = 0;
+                $("#payroll-v2-body tr").each(function () {
+                    var $row = $(this);
+                    var employeeId = getEmployeeId($row);
+                    if (!employeeId) {
+                        return;
+                    }
+
+                    var changeId = latest[employeeId];
+
+                    if (changeId) {
+                        count++;
+                        var alreadyRendered = String($row.attr("data-change-id")) === String(changeId) &&
+                            $row.find(".payroll-v2-review-btn").length === 1 &&
+                            $row.find(".payroll-v2-edited-wrap").length === 0;
+
+                        if (!alreadyRendered) {
+                            $row.find(".payroll-v2-edited-wrap, .payroll-v2-pending-badge, .payroll-v2-review-btn").remove();
+                            $row.find(".payroll-v2-employee-name").append(pendingBadge({ HasPendingApproval: true }));
+                        }
+
+                        $row.addClass("payroll-v2-row-pending").attr("data-change-id", changeId);
+                    } else {
+                        $row.find(".payroll-v2-edited-wrap, .payroll-v2-pending-badge, .payroll-v2-review-btn").remove();
+                        $row.removeClass("payroll-v2-row-pending").removeAttr("data-change-id");
+                    }
+                });
+
+                updatePendingBanner(count);
+            });
+    }
+
     function bindValidation() {
         $("#payroll-v2-table").on("input", ".payroll-v2-input", function () {
             var $input = $(this);
@@ -460,11 +706,15 @@
 
         $("#payroll-v2-table").on("blur", ".payroll-v2-input", function () {
             validateField($(this));
-            recalculateRow($(this).closest("tr"));
+            var $row = $(this).closest("tr");
+            recalculateRow($row);
+            refreshEditedState($row);
         });
 
         $("#payroll-v2-table").on("keyup input", ".payroll-v2-input", function () {
-            recalculateRow($(this).closest("tr"));
+            var $row = $(this).closest("tr");
+            recalculateRow($row);
+            refreshEditedState($row);
         });
 
         $("#payroll-v2-table").on("keydown", ".payroll-v2-input", function (event) {
@@ -511,6 +761,12 @@
 
     function formatRate(value) {
         return String(value || 0);
+    }
+
+    function shiftRibbon(shiftName) {
+        var name = shiftName || "Day Shift";
+        var cssClass = /night/i.test(name) ? "shift-ribbon-night" : "shift-ribbon-day";
+        return ' <span class="shift-ribbon ' + cssClass + '">' + escapeHtml(name) + "</span>";
     }
 
     function escapeHtml(value) {
@@ -574,7 +830,7 @@
         $("#payroll-v2-from-date, #payroll-v2-to-date, #payroll-v2-generate-btn").prop("disabled", isLoading);
     }
 
-    function updatePeriodInfo(periodName) {
+    function updatePeriodInfo(periodName, isSaved) {
         if (!periodName) {
             $("#payroll-v2-period-info").addClass("d-none");
             return;
@@ -583,7 +839,9 @@
         $("#payroll-v2-period-info")
             .removeClass("d-none alert-warning")
             .addClass("alert-light")
-            .text("Showing calculated payroll for " + periodName + ".");
+            .text(isSaved
+                ? "Showing the saved payroll for " + periodName + ". Changes you make are saved automatically and need Finance Officer approval."
+                : "Showing calculated payroll for " + periodName + ".");
     }
 
     function readonlyMoney(value, extraClass, stickyClass, fieldName) {
@@ -663,7 +921,7 @@
 
     function showAbsentDatesModal($row, dates) {
         var employeeCode = $row.find(".payroll-v2-employee-code").text().trim();
-        var employeeName = $row.find(".payroll-v2-employee-name").text().trim();
+        var employeeName = $row.find(".payroll-v2-employee-name-text").text().trim();
         var $list = $("#payroll-v2-absent-dates-list").empty();
 
         $("#payroll-v2-absent-employee").text(employeeCode + " - " + employeeName);
@@ -715,6 +973,34 @@
         return classes[salaryType] || "";
     }
 
+    function pendingBadge(record) {
+        if (!record.HasPendingApproval) {
+            return "";
+        }
+
+        return '<span class="payroll-v2-pending-badge" title="Edits to this row are waiting for Finance Officer approval">Pending approval</span>' +
+            ' <button type="button" class="btn btn-link btn-sm p-0 payroll-v2-review-btn">' +
+            (canApprove ? "Review" : "View changes") + "</button>";
+    }
+
+    function updatePendingBanner(pendingCount) {
+        var $banner = $("#payroll-v2-pending-banner");
+
+        if (!pendingCount) {
+            $banner.addClass("d-none").empty();
+            return;
+        }
+
+        var rows = pendingCount === 1 ? "1 row has" : pendingCount + " rows have";
+        var tail = canApprove
+            ? "Use Review on each highlighted row to approve or reject the changes."
+            : "A Finance Officer must approve them before they take effect. Payslips for these employees stay on hold until then.";
+
+        $banner
+            .removeClass("d-none")
+            .html("<strong>Approval needed:</strong> " + rows + " edits waiting for approval (highlighted). " + escapeHtml(tail));
+    }
+
     function renderRow(record) {
         var isDaily = record.SalaryType === 1 || record.SalaryType === "Daily";
         var isFixed = record.SalaryType === 2 || record.SalaryType === "Fixed";
@@ -725,8 +1011,13 @@
         var specialOtHours = isFixed ? 0 : (record.SpecialOtHours || 0);
         var regularHolidayAbsentCount = isFixed ? 0 : (record.RegularHolidayAbsentCount || 0);
 
+        var isPending = !!record.HasPendingApproval;
+        var pendingAttrs = isPending
+            ? ' class="payroll-v2-row-pending" data-change-id="' + record.PendingChangeRequestId + '"'
+            : "";
+
         return [
-            '<tr data-employee-id="', record.EmployeeId,
+            '<tr', pendingAttrs, ' data-employee-id="', record.EmployeeId,
             '" data-employee-code="', escapeHtml(record.EmployeeCode),
             '" data-basic-salary="', record.BasicSalary,
             '" data-position="', escapeHtml(record.Position || ""),
@@ -736,7 +1027,7 @@
             '" data-base-gross="', record.GrossSalary,
             '" data-regular-holiday-absent-count="', regularHolidayAbsentCount, '">',
             '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-0 payroll-v2-employee-code">', escapeHtml(record.EmployeeCode), "</td>",
-            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1 payroll-v2-employee-name">', escapeHtml(record.EmployeeName), "</td>",
+            '<td class="payroll-v2-sticky-col payroll-v2-sticky-col-1 payroll-v2-employee-name"><span class="payroll-v2-employee-name-text">', escapeHtml(record.EmployeeName), "</span>", shiftRibbon(record.ShiftName), pendingBadge(record), "</td>",
             '<td class="text-center ', getSalaryTypeClass(record.SalaryType), '">', escapeHtml(formatSalaryType(record.SalaryType)), "</td>",
             readonlyMoney(isDaily ? null : record.MonthlySalary, "", "", "monthlySalary"),
             readonlyMoney(isDaily ? null : record.BiMonthlySalary, "", "", "biMonthlySalary"),
@@ -805,7 +1096,7 @@
 
         return {
             EmployeeId: getEmployeeId($row),
-            EmployeeName: $row.find(".payroll-v2-employee-name").text().trim(),
+            EmployeeName: $row.find(".payroll-v2-employee-name-text").text().trim(),
             EmployeeCode: $row.find(".payroll-v2-employee-code").text().trim() || getDataAttr($row, "employee-code"),
             Position: getDataAttr($row, "position"),
             SalaryType: salaryType,
@@ -889,6 +1180,7 @@
         $body.empty();
         payrollGenerated = false;
         setSaveButtonVisible(false);
+        updatePendingBanner(0);
 
         if (!records || records.length === 0) {
             $body.append('<tr><td colspan="37" class="text-center text-muted py-4">No payroll records for this period.</td></tr>');
@@ -901,12 +1193,14 @@
 
         $body.find("tr").each(function () {
             recalculateRow($(this));
+            $(this).data("baseline", snapshotInputs($(this)));
         });
 
         applyPayrollFilter();
 
         payrollGenerated = true;
-        setSaveButtonVisible(true);
+        setSaveButtonVisible(!currentPeriodId);
+        updatePendingBanner(records.filter(function (r) { return r.HasPendingApproval; }).length);
     }
 
     function setDefaultDates(callback) {
@@ -939,7 +1233,7 @@
             });
     }
 
-    function loadPayroll() {
+    function loadPayroll(keepMessage) {
         var range = getDateRange();
 
         if (!range.fromDate || !range.toDate) {
@@ -957,7 +1251,9 @@
         }
 
         hideError();
-        hideSaveSuccess();
+        if (keepMessage !== true) {
+            hideSaveSuccess();
+        }
         setLoading(true);
         setSaveButtonVisible(false);
         setExportVisible(false);
@@ -975,10 +1271,24 @@
 
                 var periodName = response.Data.PeriodName || periodLabel;
                 currentPeriodName = periodName;
+                currentPeriodId = response.Data.PayrollPeriodId || null;
+                clearTimeout(autoSaveTimer);
+                $("#payroll-v2-autosave-status").addClass("d-none").text("");
+                $("#payroll-v2-audit-btn").toggleClass("d-none", !currentPeriodId);
                 $("#payroll-v2-period-label").text(periodName);
-                updatePeriodInfo(periodName);
+                updatePeriodInfo(periodName, !!currentPeriodId);
                 allPayrollRecords = response.Data.Records || [];
                 renderRows(allPayrollRecords);
+
+                if (keepMessage === true || currentPeriodId) {
+                    setExportVisible(true);
+                }
+
+                // Generating a period that is not in the database yet saves it right away.
+                // A period that already exists is only displayed (its edits go through approval).
+                if (keepMessage !== true && !currentPeriodId && payrollGenerated) {
+                    savePayrollPeriod(true);
+                }
             })
             .fail(function (xhr) {
                 if (xhr.statusText === "abort") {
@@ -993,12 +1303,13 @@
             });
     }
 
-    function savePayrollPeriod() {
+    function savePayrollPeriod(isGeneration) {
         if (!payrollGenerated) {
             showError("Generate payroll before saving.");
             return;
         }
 
+        clearTimeout(autoSaveTimer);
         var payload = collectTablePayload();
 
         if (!payload.FromDate || !payload.ToDate) {
@@ -1031,8 +1342,11 @@
                     return;
                 }
 
-                showSaveSuccess(response.Message || "Payroll period saved successfully.");
+                showSaveSuccess(isGeneration === true
+                    ? "Payroll for " + (payload.PeriodName || "this period") + " was generated and saved."
+                    : (response.Message || "Payroll period saved successfully."));
                 setExportVisible(true);
+                loadPayroll(true);
             })
             .fail(function (xhr) {
                 if (xhr.statusText === "abort") {
@@ -1047,10 +1361,196 @@
             });
     }
 
+    function formatAmount(value) {
+        var number = parseFloat(value);
+        if (isNaN(number)) {
+            return escapeHtml(value == null ? "" : value);
+        }
+
+        return number.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatTimestamp(value) {
+        if (!value) {
+            return "";
+        }
+
+        return new Date(value).toLocaleString("en-PH", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit"
+        });
+    }
+
+    function openReviewModal(changeId) {
+        if (!currentPeriodId) {
+            return;
+        }
+
+        $("#payroll-v2-review-alert").addClass("d-none").text("");
+        $("#payroll-v2-review-note").val("");
+        reviewingChange = null;
+
+        $.getJSON(api.auditTrail(currentPeriodId), { pendingOnly: true })
+            .done(function (response) {
+                var requests = (response && response.Data) || [];
+                var request = requests.filter(function (r) { return r.Id === changeId; })[0];
+
+                if (!request) {
+                    showError("This change is no longer pending. Refreshing the payroll.");
+                    loadPayroll(true);
+                    return;
+                }
+
+                reviewingChange = request;
+                $("#payroll-v2-review-summary").text(request.EmployeeCode + " - " + request.EmployeeName);
+                $("#payroll-v2-review-meta").text(
+                    "Submitted by " + request.RequestedBy + " on " + formatTimestamp(request.RequestedAt));
+
+                var $tbody = $("#payroll-v2-review-changes").empty();
+                (request.Changes || []).forEach(function (change) {
+                    var isText = change.Field === "PaymentMethod";
+                    $tbody.append(
+                        "<tr><td>" + escapeHtml(change.Label) + "</td>" +
+                        '<td class="text-end text-muted">' + (isText ? escapeHtml(change.OldValue) : formatAmount(change.OldValue)) + "</td>" +
+                        '<td class="text-end fw-semibold">' + (isText ? escapeHtml(change.NewValue) : formatAmount(change.NewValue)) + "</td></tr>");
+                });
+
+                $("#payroll-v2-review-actions, #payroll-v2-reject-btn, #payroll-v2-approve-btn").toggleClass("d-none", !canApprove);
+                $("#payroll-v2-review-readonly").toggleClass("d-none", canApprove);
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-review-modal")).show();
+            })
+            .fail(function () {
+                showError("Failed to load the pending changes.");
+            });
+    }
+
+    function submitReview(isApprove) {
+        if (!reviewingChange) {
+            return;
+        }
+
+        var $buttons = $("#payroll-v2-approve-btn, #payroll-v2-reject-btn").prop("disabled", true);
+
+        $.ajax({
+            url: isApprove ? api.approveChange(reviewingChange.Id) : api.rejectChange(reviewingChange.Id),
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ Note: $("#payroll-v2-review-note").val() })
+        })
+            .done(function (response) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-review-modal")).hide();
+                showSaveSuccess((response && response.Message) || "Done.");
+                if (window.FliqNotifications) {
+                    window.FliqNotifications.refresh();
+                }
+                loadPayroll(true);
+            })
+            .fail(function (xhr) {
+                var message = getAjaxErrorMessage(xhr, "Failed to submit your decision.");
+
+                if (xhr.status === 401 || xhr.status === 403 || xhr.status === 302 || xhr.status === 0) {
+                    message = "Only a signed-in Finance Officer can approve or reject payroll changes.";
+                }
+
+                $("#payroll-v2-review-alert").removeClass("d-none").text(message);
+            })
+            .always(function () {
+                $buttons.prop("disabled", false);
+            });
+    }
+
+    function statusBadge(status) {
+        var classes = {
+            Pending: "bg-warning text-dark",
+            Approved: "bg-success",
+            Rejected: "bg-danger",
+            Superseded: "bg-secondary"
+        };
+
+        return '<span class="badge ' + (classes[status] || "bg-secondary") + '">' + escapeHtml(status) + "</span>";
+    }
+
+    function openAuditModal() {
+        if (!currentPeriodId) {
+            return;
+        }
+
+        var $body = $("#payroll-v2-audit-body").html(
+            '<tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>');
+        $("#payroll-v2-audit-alert").addClass("d-none").text("");
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-audit-modal")).show();
+
+        $.getJSON(api.auditTrail(currentPeriodId))
+            .done(function (response) {
+                var requests = (response && response.Data) || [];
+                $body.empty();
+
+                if (requests.length === 0) {
+                    $body.append('<tr><td colspan="6" class="text-center text-muted py-3">No changes have been made to this payroll since it was generated.</td></tr>');
+                    return;
+                }
+
+                requests.forEach(function (request) {
+                    var changes = (request.Changes || []).map(function (change) {
+                        var isText = change.Field === "PaymentMethod";
+                        var from = isText ? escapeHtml(change.OldValue) : formatAmount(change.OldValue);
+                        var to = isText ? escapeHtml(change.NewValue) : formatAmount(change.NewValue);
+                        return "<li>" + escapeHtml(change.Label) + ": " + from + " &rarr; <strong>" + to + "</strong></li>";
+                    }).join("");
+
+                    var reviewed = request.ReviewedBy
+                        ? escapeHtml(request.ReviewedBy) + "<br /><span class=\"text-muted small\">" +
+                          escapeHtml(formatTimestamp(request.ReviewedAt)) + "</span>" +
+                          (request.ReviewNote ? "<br /><em class=\"small\">" + escapeHtml(request.ReviewNote) + "</em>" : "")
+                        : '<span class="text-muted">&mdash;</span>';
+
+                    $body.append(
+                        "<tr><td class=\"text-nowrap\">" + escapeHtml(formatTimestamp(request.RequestedAt)) + "</td>" +
+                        "<td>" + escapeHtml(request.EmployeeCode) + "<br />" + escapeHtml(request.EmployeeName) + "</td>" +
+                        '<td><ul class="audit-change-list">' + changes + "</ul></td>" +
+                        "<td>" + escapeHtml(request.RequestedBy) + "</td>" +
+                        "<td>" + statusBadge(request.StatusName) + "</td>" +
+                        "<td>" + reviewed + "</td></tr>");
+                });
+            })
+            .fail(function () {
+                $body.empty();
+                $("#payroll-v2-audit-alert").removeClass("d-none").text("Failed to load the audit trail.");
+            });
+    }
+
+    function bindApproval() {
+        $("#payroll-v2-body").on("click", ".payroll-v2-review-btn", function () {
+            var $row = $(this).closest("tr");
+            var changeId = parseInt($row.attr("data-change-id"), 10);
+
+            if (changeId) {
+                openReviewModal(changeId);
+                return;
+            }
+
+            // The edit has not been saved yet: save now, then show the change.
+            runAutoSave(function () {
+                var savedId = parseInt($row.attr("data-change-id"), 10);
+                if (savedId) {
+                    openReviewModal(savedId);
+                }
+            });
+        });
+        $("#payroll-v2-approve-btn").on("click", function () { submitReview(true); });
+        $("#payroll-v2-reject-btn").on("click", function () { submitReview(false); });
+        $("#payroll-v2-audit-btn").on("click", openAuditModal);
+    }
+
     function bindPeriodControls() {
         setDefaultDates();
-        $("#payroll-v2-generate-btn").on("click", loadPayroll);
-        $("#payroll-v2-save-btn").on("click", savePayrollPeriod);
+        $("#payroll-v2-generate-btn").on("click", function () { loadPayroll(false); });
+        $("#payroll-v2-save-btn").on("click", function () { savePayrollPeriod(false); });
         $("#payroll-v2-from-date, #payroll-v2-to-date").on("change", function () {
             setExportVisible(false);
             hideSaveSuccess();
@@ -1061,6 +1561,7 @@
         bindValidation();
         bindPeriodControls();
         bindAbsentDaysLinks();
+        bindApproval();
         initEmployeeFilter();
         loadEmployees();
     });

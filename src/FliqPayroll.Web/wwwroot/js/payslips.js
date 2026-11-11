@@ -45,6 +45,30 @@
     function hideAlerts() {
         $("#payslips-alert").addClass("d-none").text("");
         $("#payslips-success").addClass("d-none").text("");
+        $("#payslips-pending-warning").addClass("d-none");
+    }
+
+    function showPendingWarning(pendingCount, totalCount) {
+        var $warning = $("#payslips-pending-warning");
+
+        if (!pendingCount) {
+            $warning.addClass("d-none");
+            $("#payslips-pending-warning-text").text("");
+            return;
+        }
+
+        var subject = pendingCount === 1
+            ? "1 payroll row in this period has"
+            : pendingCount + " payroll rows in this period have";
+        var downloadNote = pendingCount >= totalCount
+            ? "Every payslip in this period is currently on hold."
+            : "Download All Payslips will skip these rows.";
+
+        $("#payslips-pending-warning-text").text(
+            subject + " manual changes awaiting Finance Officer approval. " +
+            "You cannot print, download or email the payslips for the highlighted employees until a Finance Officer approves the changes. " +
+            downloadNote);
+        $warning.removeClass("d-none");
     }
 
     function setGenerateEnabled(isEnabled) {
@@ -67,6 +91,7 @@
         $("#payslip-total-net").text("—");
         hasGeneratedRecords = false;
         setDownloadAllVisible(false);
+        showPendingWarning(0, 0);
     }
 
     function populatePeriodSelect(periods) {
@@ -83,6 +108,10 @@
             var label = period.PeriodName;
             if (period.RecordCount != null) {
                 label += " (" + period.RecordCount + " employees)";
+            }
+
+            if (period.PendingApprovalCount > 0) {
+                label += " \u26A0 " + period.PendingApprovalCount + " pending approval";
             }
 
             $select.append(
@@ -155,27 +184,40 @@
             return;
         }
 
+        var pendingCount = 0;
+
         report.Records.forEach(function (record) {
+            var isPending = !!record.HasPendingApproval;
+            if (isPending) {
+                pendingCount++;
+            }
+
+            var actions = isPending
+                ? '<span class="payslip-pending-label" title="Payslip is on hold until a Finance Officer approves the changes">' +
+                  "&#9888; Pending approval</span>"
+                : '<a href="' + api.payslipPdf(record.EmployeeId, selectedPeriodId) +
+                  '" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">PDF</a>' +
+                  buildEmailButton(record);
+
             $body.append([
-                "<tr>",
+                isPending ? '<tr class="payslip-row-pending">' : "<tr>",
                 "<td>", escapeHtml(record.EmployeeCode), "</td>",
                 "<td>", escapeHtml(record.EmployeeName), "</td>",
                 "<td>", escapeHtml(record.Position || "—"), "</td>",
                 "<td>", formatCurrency(record.GrossPay), "</td>",
                 "<td>", formatCurrency(record.TotalDeductions), "</td>",
                 "<td><strong>", formatCurrency(record.NetPay), "</strong></td>",
-                '<td><div class="d-flex flex-wrap gap-1">',
-                '<a href="' + api.payslipPdf(record.EmployeeId, selectedPeriodId) +
-                '" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">PDF</a>',
-                buildEmailButton(record),
+                '<td><div class="d-flex flex-wrap gap-1 align-items-center">',
+                actions,
                 "</div></td>",
                 "</tr>"
             ].join(""));
         });
 
         initTooltips($body);
-        hasGeneratedRecords = true;
-        setDownloadAllVisible(true);
+        showPendingWarning(pendingCount, report.Records.length);
+        hasGeneratedRecords = pendingCount < report.Records.length;
+        setDownloadAllVisible(hasGeneratedRecords);
     }
 
     function generatePayslips() {

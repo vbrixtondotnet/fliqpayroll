@@ -237,6 +237,19 @@
         });
     }
 
+    function shiftLabel(record) {
+        return $("<span>").text(record.ShiftName || "Day Shift").html() +
+            ' <small class="text-muted">' + formatShiftTime(record.ShiftStart) + "–" + formatShiftTime(record.ShiftEnd) + "</small>";
+    }
+
+    // ShiftStart / ShiftEnd arrive as "HH:mm:ss".
+    function formatShiftTime(value) {
+        const parts = String(value || "").split(":");
+        const hours = Number(parts[0]);
+        if (isNaN(hours)) { return ""; }
+        return ((hours % 12) || 12) + ":" + (parts[1] || "00") + (hours >= 12 ? " PM" : " AM");
+    }
+
     function renderRows(records) {
         const $body = $("#attendance-body");
         $body.empty();
@@ -246,7 +259,7 @@
             const message = employeeId
                 ? "No attendance records for the selected employee in this date range."
                 : "No attendance records for this date range.";
-            $body.append('<tr><td colspan="11" class="text-center text-muted py-4">' + message + '</td></tr>');
+            $body.append('<tr><td colspan="12" class="text-center text-muted py-4">' + message + '</td></tr>');
             return;
         }
 
@@ -263,6 +276,7 @@
                 '<tr data-id="' + record.Id + '">',
                 "<td>" + record.EmployeeCode + "</td>",
                 "<td>" + record.EmployeeName + bioBadge + "</td>",
+                '<td class="text-nowrap">' + shiftLabel(record) + "</td>",
                 "<td>" + formatRecordDate(record.Date) + "</td>",
                 '<td><input type="text" class="form-control form-control-sm attendance-time-in" value="' + formatTime(record.TimeIn) + '" placeholder="8:00 AM" /></td>',
                 '<td><input type="text" class="form-control form-control-sm attendance-time-out" value="' + formatTime(record.TimeOut) + '" placeholder="5:00 PM" /></td>',

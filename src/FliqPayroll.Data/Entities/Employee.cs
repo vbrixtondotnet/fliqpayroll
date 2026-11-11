@@ -43,6 +43,8 @@ public class Employee
     public decimal PagIbigErShare { get; set; }
     public decimal PagIbigEeShare { get; set; }
     public decimal PagIbigLoan { get; set; }
+    public int? ShiftId { get; set; }
+    public Shift? Shift { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

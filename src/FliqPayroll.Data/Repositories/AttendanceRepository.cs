@@ -52,6 +52,7 @@ public class AttendanceRepository : IAttendanceRepository
             .AsNoTracking()
 
             .Include(a => a.Employee)
+            .ThenInclude(e => e.Shift)
 
             .Where(a => a.Date >= phStart && a.Date < endExclusive)
 
@@ -65,7 +66,8 @@ public class AttendanceRepository : IAttendanceRepository
 
 
 
-        return entities.Select(MapToDto).ToList();
+        var defaultSchedule = await LoadDefaultScheduleAsync(cancellationToken);
+        return entities.Select(e => MapToDto(e, defaultSchedule)).ToList();
 
     }
 
@@ -84,6 +86,7 @@ public class AttendanceRepository : IAttendanceRepository
             .AsNoTracking()
 
             .Include(a => a.Employee)
+            .ThenInclude(e => e.Shift)
 
             .Where(a =>
 
@@ -101,7 +104,8 @@ public class AttendanceRepository : IAttendanceRepository
 
 
 
-        return entities.Select(MapToDto).ToList();
+        var defaultSchedule = await LoadDefaultScheduleAsync(cancellationToken);
+        return entities.Select(e => MapToDto(e, defaultSchedule)).ToList();
 
     }
 
@@ -118,6 +122,7 @@ public class AttendanceRepository : IAttendanceRepository
         var entity = await _context.AttendanceRecords
 
             .Include(a => a.Employee)
+            .ThenInclude(e => e.Shift)
 
             .FirstOrDefaultAsync(a => a.Id == dto.Id, cancellationToken);
 
@@ -153,7 +158,7 @@ public class AttendanceRepository : IAttendanceRepository
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return MapToDto(entity);
+        return MapToDto(entity, await LoadDefaultScheduleAsync(cancellationToken));
 
     }
 
@@ -208,6 +213,7 @@ public class AttendanceRepository : IAttendanceRepository
             .AsNoTracking()
 
             .Include(a => a.Employee)
+            .ThenInclude(e => e.Shift)
 
             .Where(a =>
 
@@ -223,7 +229,8 @@ public class AttendanceRepository : IAttendanceRepository
 
 
 
-        return entities.Select(MapToDto).ToList();
+        var defaultSchedule = await LoadDefaultScheduleAsync(cancellationToken);
+        return entities.Select(e => MapToDto(e, defaultSchedule)).ToList();
 
     }
 
@@ -359,8 +366,47 @@ public class AttendanceRepository : IAttendanceRepository
 
 
 
-    private static AttendanceDto MapToDto(AttendanceRecord entity)
+    public async Task<IReadOnlyDictionary<int, ShiftSchedule>> GetEmployeeSchedulesAsync(CancellationToken cancellationToken = default)
     {
+        var defaultSchedule = await LoadDefaultScheduleAsync(cancellationToken);
+        var employees = await _context.Employees
+            .AsNoTracking()
+            .Select(e => new { e.Id, e.Shift })
+            .ToListAsync(cancellationToken);
+
+        return employees.ToDictionary(
+            e => e.Id,
+            e => e.Shift is null ? defaultSchedule : ToSchedule(e.Shift));
+    }
+
+    public async Task<ShiftSchedule> GetScheduleForAttendanceAsync(int attendanceId, CancellationToken cancellationToken = default)
+    {
+        var shift = await _context.AttendanceRecords
+            .AsNoTracking()
+            .Where(a => a.Id == attendanceId)
+            .Select(a => a.Employee.Shift)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return shift is null
+            ? await LoadDefaultScheduleAsync(cancellationToken)
+            : ToSchedule(shift);
+    }
+
+    /// <summary>The seeded Day Shift as currently configured; constants only if the row is missing.</summary>
+    private async Task<ShiftSchedule> LoadDefaultScheduleAsync(CancellationToken cancellationToken)
+    {
+        var shift = await _context.Shifts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == ShiftConstants.DefaultShiftId, cancellationToken);
+
+        return shift is null ? ShiftSchedule.Default : ToSchedule(shift);
+    }
+
+    private static ShiftSchedule ToSchedule(Shift shift) => new(shift.Name, shift.StartTime, shift.EndTime);
+
+    private static AttendanceDto MapToDto(AttendanceRecord entity, ShiftSchedule defaultSchedule)
+    {
+        var shift = entity.Employee.Shift is { } assigned ? ToSchedule(assigned) : defaultSchedule;
         var timeIn = entity.TimeIn;
         var timeOut = entity.TimeOut;
         var isNextDayTimeOut = AttendancePolicyProcessor.IsNextDayTimeOut(timeIn, timeOut);
@@ -369,7 +415,8 @@ public class AttendanceRepository : IAttendanceRepository
             timeOut,
             isNextDayTimeOut,
             out var overtimeIn,
-            out var overtimeOut);
+            out var overtimeOut,
+            shift);
 
         return new AttendanceDto
         {
@@ -380,12 +427,15 @@ public class AttendanceRepository : IAttendanceRepository
             Date = AttendanceDateHelper.ToCalendarDate(entity.Date),
             TimeIn = timeIn,
             TimeOut = timeOut,
-            IsLate = AttendanceConstants.IsLateTimeIn(timeIn),
+            IsLate = AttendanceConstants.IsLateTimeIn(timeIn, shift),
             OvertimeIn = hasValidOvertime ? overtimeIn : null,
             OvertimeOut = hasValidOvertime ? overtimeOut : null,
             IsOvertimeValid = hasValidOvertime,
             IsFromBiometric = entity.IsFromBiometric,
-            Notes = entity.Notes
+            Notes = entity.Notes,
+            ShiftName = shift.Name,
+            ShiftStart = shift.Start,
+            ShiftEnd = shift.End
         };
     }
 }

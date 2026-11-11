@@ -16,6 +16,7 @@ public class HomeController : Controller
         return View();
     }
 
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

@@ -49,6 +49,16 @@ public class PayslipEmailService : IPayslipEmailService
             throw new InvalidOperationException("Payslip not found for the selected employee and payroll period.");
         }
 
+        if (payslip.Payroll.HasPendingApproval)
+        {
+            // Edits were submitted after this job was queued. The payslip would not reflect them, so hold it back.
+            _logger.LogWarning(
+                "Payslip email skipped for employee {EmployeeId}, period {PayrollPeriodId}: payroll changes are pending approval.",
+                employeeId,
+                payrollPeriodId);
+            return;
+        }
+
         var savedPeriod = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
         var savedRecord = savedPeriod?.Records.FirstOrDefault(r => r.EmployeeId == employeeId);
         if (savedRecord?.PayslipEmailSent == true)

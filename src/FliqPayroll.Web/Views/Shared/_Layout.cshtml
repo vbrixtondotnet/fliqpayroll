@@ -1,6 +1,27 @@
-﻿@{
+﻿@inject Microsoft.AspNetCore.Identity.UserManager<FliqPayroll.Data.Entities.ApplicationUser> UserManager
+@{
 
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+
+    // Avatar shown in the header: initials of the user's full name (first + last word), e.g. "Jen Degoma" -> "JD".
+    var displayName = User.Identity?.Name ?? "";
+    var initials = "?";
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        var fullName = (await UserManager.GetUserAsync(User))?.FullName?.Trim();
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            displayName = fullName;
+            var words = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            initials = words.Length == 1
+                ? words[0][..1].ToUpperInvariant()
+                : (words[0][..1] + words[^1][..1]).ToUpperInvariant();
+        }
+        else if (displayName.Length > 0)
+        {
+            initials = displayName[..1].ToUpperInvariant();
+        }
+    }
 
 }
 
@@ -108,6 +129,22 @@
 
                         </li>
 
+                        <li class="nav-item">
+
+                            <a class="nav-link @(currentController == "Shifts" ? "active" : "")"
+
+                               asp-controller="Shifts" asp-action="Index">Shifts</a>
+
+                        </li>
+
+                        @if (User.IsInRole(FliqPayroll.Core.Constants.RoleConstants.FinanceOfficer))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(currentController == "Approvals" ? "active" : "")"
+                                   asp-controller="Approvals" asp-action="Index">Approvals</a>
+                            </li>
+                        }
+
                     </ul>
 
                     <ul class="navbar-nav mb-2 mb-lg-0">
@@ -116,22 +153,46 @@
 
                         {
 
-                            <li class="nav-item">
-
-                                <span class="navbar-text me-3">@User.Identity.Name</span>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-
-                                    @Html.AntiForgeryToken()
-
-                                    <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-
-                                </form>
-
+                            @if (User.IsInRole(FliqPayroll.Core.Constants.RoleConstants.FinanceOfficer))
+                            {
+                                <li class="nav-item dropdown me-2" id="notification-bell">
+                                    <button type="button" class="btn btn-link nav-link position-relative px-2 notification-bell-btn"
+                                            id="notification-bell-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                            aria-expanded="false" aria-label="Notifications">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z" />
+                                        </svg>
+                                        <span id="notification-badge"
+                                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-end notification-menu p-0" aria-labelledby="notification-bell-btn">
+                                        <div class="notification-header px-3 py-2">
+                                            <div class="fw-semibold">Pending approvals</div>
+                                            <div id="notification-subtitle" class="small text-muted"></div>
+                                        </div>
+                                        <div id="notification-list" class="notification-list"></div>
+                                        <a class="dropdown-item text-center small py-2 notification-footer" href="/Approvals">View all approvals</a>
+                                    </div>
+                                </li>
+                            }
+                            <li class="nav-item dropdown">
+                                <button type="button" class="user-avatar-btn" id="user-menu-btn" data-bs-toggle="dropdown"
+                                        aria-expanded="false" aria-label="Account menu for @displayName" title="@displayName">
+                                    <span class="user-avatar" aria-hidden="true">@initials</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end user-menu" aria-labelledby="user-menu-btn">
+                                    <li class="user-menu-header px-3 py-2">
+                                        <div class="fw-semibold">@displayName</div>
+                                        <div class="small text-muted">@User.Identity.Name</div>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            <button type="submit" class="dropdown-item">Logout</button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </li>
 
                         }
@@ -191,6 +252,10 @@
     <script src="~/js/ph-time.js" asp-append-version="true"></script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (User.IsInRole(FliqPayroll.Core.Constants.RoleConstants.FinanceOfficer))
+    {
+        <script src="~/js/notifications.js" asp-append-version="true"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 

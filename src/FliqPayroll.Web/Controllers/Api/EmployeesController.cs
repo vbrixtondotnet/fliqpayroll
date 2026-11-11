@@ -7,7 +7,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/employees")]
-[AllowAnonymous]
 public class EmployeesApiController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;

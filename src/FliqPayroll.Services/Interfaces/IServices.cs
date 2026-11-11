@@ -68,6 +68,16 @@ public interface IPayrollService
 
     Task<PayrollByDateRangeDto?> GetSavedPeriodByIdAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<PayrollChangeRequestDto>> GetChangeRequestsAsync(int payrollPeriodId, bool pendingOnly = false, CancellationToken cancellationToken = default);
+
+    Task<PayrollChangeRequestDto> ApproveChangeAsync(int changeRequestId, string reviewer, string? note, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PayrollApprovalSummaryDto>> GetPendingApprovalSummariesAsync(CancellationToken cancellationToken = default);
+
+    Task<int> ReviewAllPendingAsync(int payrollPeriodId, bool approve, string reviewer, string? note, CancellationToken cancellationToken = default);
+
+    Task<PayrollChangeRequestDto> RejectChangeAsync(int changeRequestId, string reviewer, string? note, CancellationToken cancellationToken = default);
+
     Task<byte[]> ExportExcelAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
 
     Task<byte[]> ExportCsvAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
@@ -128,6 +138,14 @@ public interface IHolidayService
 
     Task<bool> DeleteAsync(int holidayId, CancellationToken cancellationToken = default);
 
+}
+
+public interface IShiftService
+{
+    Task<IReadOnlyList<ShiftDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ShiftDto?> UpdateAsync(int shiftId, UpdateShiftDto dto, CancellationToken cancellationToken = default);
+    Task<ShiftDto?> SetEmployeesAsync(int shiftId, AssignShiftEmployeesDto dto, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ShiftEmployeeDto>> GetAssignableEmployeesAsync(CancellationToken cancellationToken = default);
 }
 
 public interface ILeaveService

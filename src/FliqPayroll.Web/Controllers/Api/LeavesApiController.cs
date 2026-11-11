@@ -8,7 +8,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/leaves")]
-[AllowAnonymous]
 public class LeavesApiController : ControllerBase
 {
     private readonly ILeaveService _leaveService;

@@ -33,9 +33,11 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<Holiday> Holidays => Set<Holiday>();
+    public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<LeaveRecord> LeaveRecords => Set<LeaveRecord>();
     public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
     public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
+    public DbSet<PayrollChangeRequest> PayrollChangeRequests => Set<PayrollChangeRequest>();
 
 
 
@@ -44,6 +46,11 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
     {
 
         base.OnModelCreating(modelBuilder);
+
+        // Default 1 at the database level too, so users inserted with plain SQL get it as well.
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(u => u.PasswordChange)
+            .HasDefaultValue(true);
 
 
 
@@ -155,6 +162,20 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
 
         });
 
+        modelBuilder.Entity<Shift>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasMany(e => e.Employees)
+                .WithOne(e => e.Shift)
+                .HasForeignKey(e => e.ShiftId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasData(
+                new Shift { Id = 1, Name = "Day Shift", StartTime = new TimeSpan(8, 0, 0), EndTime = new TimeSpan(17, 0, 0), CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Shift { Id = 2, Name = "Night Shift", StartTime = new TimeSpan(17, 0, 0), EndTime = new TimeSpan(2, 0, 0), CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) });
+        });
+
         modelBuilder.Entity<Holiday>(entity =>
         {
             entity.HasKey(e => e.HolidayId);
@@ -177,6 +198,18 @@ public class FliqPayrollDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.HasIndex(e => new { e.StartDate, e.EndDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<PayrollChangeRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EmployeeCode).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.EmployeeName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.RequestedBy).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.ReviewedBy).HasMaxLength(256);
+            entity.Property(e => e.ReviewNote).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.PayrollPeriodId, e.EmployeeId, e.Status });
+            entity.HasOne(e => e.PayrollPeriod).WithMany().HasForeignKey(e => e.PayrollPeriodId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PayrollRecord>(entity =>

@@ -64,6 +64,11 @@ namespace FliqPayroll.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<bool>("PasswordChange")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
@@ -359,6 +364,9 @@ namespace FliqPayroll.Data.Migrations
                     b.Property<int>("SalaryType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ShiftId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("SssEeShare")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -390,6 +398,8 @@ namespace FliqPayroll.Data.Migrations
 
                     b.HasIndex("EmployeeCode")
                         .IsUnique();
+
+                    b.HasIndex("ShiftId");
 
                     b.ToTable("Employees");
                 });
@@ -460,6 +470,67 @@ namespace FliqPayroll.Data.Migrations
                     b.ToTable("LeaveRecords");
                 });
 
+            modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollChangeRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmployeeCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EmployeeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("PayrollPeriodId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProposedJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollPeriodId", "EmployeeId", "Status");
+
+                    b.ToTable("PayrollChangeRequests");
+                });
+
             modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollPeriod", b =>
                 {
                     b.Property<int>("Id")
@@ -467,6 +538,9 @@ namespace FliqPayroll.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovalNotifiedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -762,6 +836,57 @@ namespace FliqPayroll.Data.Migrations
                     b.ToTable("PayrollRecords");
                 });
 
+            modelBuilder.Entity("FliqPayroll.Data.Entities.Shift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Shifts");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EndTime = new TimeSpan(0, 17, 0, 0, 0),
+                            Name = "Day Shift",
+                            StartTime = new TimeSpan(0, 8, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EndTime = new TimeSpan(0, 2, 0, 0, 0),
+                            Name = "Night Shift",
+                            StartTime = new TimeSpan(0, 17, 0, 0, 0)
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -906,6 +1031,16 @@ namespace FliqPayroll.Data.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("FliqPayroll.Data.Entities.Employee", b =>
+                {
+                    b.HasOne("FliqPayroll.Data.Entities.Shift", "Shift")
+                        .WithMany("Employees")
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Shift");
+                });
+
             modelBuilder.Entity("FliqPayroll.Data.Entities.LeaveRecord", b =>
                 {
                     b.HasOne("FliqPayroll.Data.Entities.Employee", "Employee")
@@ -915,6 +1050,17 @@ namespace FliqPayroll.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollChangeRequest", b =>
+                {
+                    b.HasOne("FliqPayroll.Data.Entities.PayrollPeriod", "PayrollPeriod")
+                        .WithMany()
+                        .HasForeignKey("PayrollPeriodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PayrollPeriod");
                 });
 
             modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollRecord", b =>
@@ -999,6 +1145,11 @@ namespace FliqPayroll.Data.Migrations
             modelBuilder.Entity("FliqPayroll.Data.Entities.PayrollPeriod", b =>
                 {
                     b.Navigation("PayrollRecords");
+                });
+
+            modelBuilder.Entity("FliqPayroll.Data.Entities.Shift", b =>
+                {
+                    b.Navigation("Employees");
                 });
 #pragma warning restore 612, 618
         }

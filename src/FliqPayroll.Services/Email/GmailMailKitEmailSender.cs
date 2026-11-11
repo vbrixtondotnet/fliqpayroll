@@ -51,7 +51,8 @@ public class GmailMailKitEmailSender : IEmailSender
 
         var builder = new BodyBuilder
         {
-            TextBody = request.BodyText ?? string.Empty
+            TextBody = request.BodyText ?? string.Empty,
+            HtmlBody = string.IsNullOrWhiteSpace(request.BodyHtml) ? null : request.BodyHtml
         };
 
         foreach (var attachment in request.Attachments ?? [])

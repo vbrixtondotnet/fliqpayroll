@@ -11,12 +11,14 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/reports")]
-[AllowAnonymous]
 public class ReportsApiController : ControllerBase
 {
     private readonly IReportService _reportService;
     private readonly PayslipPdfService _payslipPdfService;
     private readonly IBackgroundJobClient _backgroundJobs;
+
+    private const string PendingApprovalMessage =
+        "This payslip has changes pending approval. It cannot be printed or emailed until a Finance Officer approves them.";
 
     public ReportsApiController(
         IReportService reportService,
@@ -189,6 +191,11 @@ public class ReportsApiController : ControllerBase
 
         }
 
+        if (payslip.Payroll.HasPendingApproval)
+        {
+            return Conflict(PendingApprovalMessage);
+        }
+
 
 
         var pdf = _payslipPdfService.Generate(payslip);
@@ -221,6 +228,11 @@ public class ReportsApiController : ControllerBase
             {
                 return NotFound(ApiResult<object>.Fail(
                     "Payslip not found for the selected employee and payroll period."));
+            }
+
+            if (record.HasPendingApproval)
+            {
+                return Conflict(ApiResult<object>.Fail(PendingApprovalMessage));
             }
 
             if (record.PayslipEmailSent)
@@ -264,10 +276,17 @@ public class ReportsApiController : ControllerBase
     {
         try
         {
-            var payslips = await _reportService.GetAllPayslipsByPeriodIdAsync(payrollPeriodId, cancellationToken);
-            if (payslips.Count == 0)
+            var allPayslips = await _reportService.GetAllPayslipsByPeriodIdAsync(payrollPeriodId, cancellationToken);
+            if (allPayslips.Count == 0)
             {
                 return NotFound("No payslips found for this payroll period.");
+            }
+
+            // Rows with unapproved edits are left out so an outdated payslip is never printed.
+            var payslips = allPayslips.Where(p => !p.Payroll.HasPendingApproval).ToList();
+            if (payslips.Count == 0)
+            {
+                return Conflict(PendingApprovalMessage);
             }
 
             var pdf = _payslipPdfService.GenerateAll(payslips);

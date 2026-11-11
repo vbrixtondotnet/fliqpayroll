@@ -1,3 +1,5 @@
+using FliqPayroll.Core.Utilities;
+
 namespace FliqPayroll.Core.Constants;
 
 public static class AttendanceConstants
@@ -19,33 +21,19 @@ public static class AttendanceConstants
     /// After 6:00 AM, the previous day is treated as missing Time Out (Absent).
     /// </summary>
     public static readonly TimeSpan NextDayTimeOutGraceEnd = new(6, 0, 0);
+    /// <summary>Minutes after the shift start during which a clock-in is still on time.</summary>
+    public const int GracePeriodMinutes = 15;
     /// <summary>Grace period ends at 8:15 AM Philippine Time (UTC+8).</summary>
     public static readonly TimeSpan GracePeriodEnd = new(8, 15, 0);
     /// <summary>Late threshold starts at 8:16 AM Philippine Time (UTC+8).</summary>
     public static readonly TimeSpan LateThreshold = new(8, 16, 0);
 
-    public static bool IsLateTimeIn(TimeSpan? timeIn)
-    {
-        if (!timeIn.HasValue)
-        {
-            return false;
-        }
+    /// <summary>Late check against the given shift (Day Shift when <paramref name="shift"/> is null).</summary>
+    public static bool IsLateTimeIn(TimeSpan? timeIn, ShiftSchedule? shift = null) =>
+        (shift ?? ShiftSchedule.Default).IsLate(timeIn);
 
-        return ToClockMinutes(timeIn.Value) > ToClockMinutes(GracePeriodEnd);
-    }
-
-    public static decimal CalculateLateMinutes(TimeSpan? timeIn)
-    {
-        if (!IsLateTimeIn(timeIn))
-        {
-            return 0m;
-        }
-
-        return ToClockMinutes(timeIn!.Value) - ToClockMinutes(WorkStart);
-    }
-
-    private static int ToClockMinutes(TimeSpan time) =>
-        (time.Hours * 60) + time.Minutes;
+    public static decimal CalculateLateMinutes(TimeSpan? timeIn, ShiftSchedule? shift = null) =>
+        (shift ?? ShiftSchedule.Default).CalculateLateMinutes(timeIn);
 
     // Biometric export:
     public const int CsvColumnEmployeeCode = 1;

@@ -7,7 +7,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/dashboard")]
-[AllowAnonymous]
 public class DashboardApiController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

@@ -1,6 +1,8 @@
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Utilities;
 using FliqPayroll.Services.Interfaces;
+using FliqPayroll.Web.Jobs;
+using Hangfire;
 
 using Microsoft.AspNetCore.Authorization;
 
@@ -16,22 +18,23 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [Route("api/payroll")]
 
-[AllowAnonymous]
 
 public class PayrollApiController : ControllerBase
 
 {
 
     private readonly IPayrollService _payrollService;
+    private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly IConfiguration _configuration;
 
-
-
-    public PayrollApiController(IPayrollService payrollService)
-
+    public PayrollApiController(
+        IPayrollService payrollService,
+        IBackgroundJobClient backgroundJobs,
+        IConfiguration configuration)
     {
-
         _payrollService = payrollService;
-
+        _backgroundJobs = backgroundJobs;
+        _configuration = configuration;
     }
 
 
@@ -135,11 +138,30 @@ public class PayrollApiController : ControllerBase
                     FromDate = PhilippineTime.ToPhilippineDate(request.FromDate),
                     ToDate = PhilippineTime.ToPhilippineDate(request.ToDate),
                     PeriodName = request.PeriodName,
-                    Records = request.Records
+                    Records = request.Records,
+                    RequestedBy = User.Identity?.Name ?? "Anonymous"
                 },
                 cancellationToken);
 
-            return Ok(ApiResult<SavePayrollPeriodResultDto>.Ok(result, "Payroll period saved successfully."));
+            if (result.NotifyApprovers)
+            {
+                // The first pending change of a period schedules ONE consolidated email. The short delay lets a burst
+                // of edits (auto-save) be reported together; the report is built from the database when the job runs.
+                var delaySeconds = Math.Max(0, _configuration.GetValue("Approvals:EmailDelaySeconds", 120));
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                _backgroundJobs.Schedule<PayrollApprovalEmailJobs>(
+                    job => job.SendAsync(result.PayrollPeriodId, baseUrl, null),
+                    TimeSpan.FromSeconds(delaySeconds));
+            }
+
+            var message = result.SubmittedForApprovalCount > 0
+                ? $"{result.SubmittedForApprovalCount} edited row(s) were submitted for approval. " +
+                  "The changes take effect once a Finance Officer approves them."
+                : result.PendingApprovalCount > 0
+                    ? "No new changes. Some rows are still waiting for Finance Officer approval."
+                    : "Payroll period saved successfully.";
+
+            return Ok(ApiResult<SavePayrollPeriodResultDto>.Ok(result, message));
         }
         catch (ArgumentException ex)
         {

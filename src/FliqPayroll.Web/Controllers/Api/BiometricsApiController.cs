@@ -8,7 +8,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/biometrics")]
-[AllowAnonymous]
 public class BiometricsApiController : ControllerBase
 {
     private readonly IBiometricService _biometricService;

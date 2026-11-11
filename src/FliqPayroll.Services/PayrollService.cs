@@ -1,3 +1,4 @@
+using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.DTOs;
 using FliqPayroll.Core.Enums;
 using FliqPayroll.Core.Interfaces;
@@ -13,14 +14,17 @@ public class PayrollService : IPayrollService
     private readonly IHolidayRepository _holidayRepository;
     private readonly ILeaveRepository _leaveRepository;
     private readonly IPayrollPeriodRepository _payrollPeriodRepository;
+    private readonly IShiftRepository _shiftRepository;
 
     public PayrollService(
         IEmployeeRepository employeeRepository,
         IAttendanceRepository attendanceRepository,
         IHolidayRepository holidayRepository,
         ILeaveRepository leaveRepository,
-        IPayrollPeriodRepository payrollPeriodRepository)
+        IPayrollPeriodRepository payrollPeriodRepository,
+        IShiftRepository shiftRepository)
     {
+        _shiftRepository = Guard.AgainstNull(shiftRepository, nameof(shiftRepository));
         _employeeRepository = Guard.AgainstNull(employeeRepository, nameof(employeeRepository));
         _attendanceRepository = Guard.AgainstNull(attendanceRepository, nameof(attendanceRepository));
         _holidayRepository = Guard.AgainstNull(holidayRepository, nameof(holidayRepository));
@@ -37,16 +41,123 @@ public class PayrollService : IPayrollService
         CancellationToken cancellationToken = default)
     {
         var period = PayrollPeriodHelper.CreateRange(fromDate, toDate);
-        var records = await ComputePayrollForPeriodAsync(period, employeeId: null, cancellationToken);
+        var computed = await ComputePayrollForPeriodAsync(period, employeeId: null, cancellationToken);
+
+        var saved = await _payrollPeriodRepository.GetSavedByDateRangeAsync(fromDate, toDate, cancellationToken);
+        if (saved?.PayrollPeriodId is not int savedPeriodId)
+        {
+            return new PayrollByDateRangeDto
+            {
+                FromDate = period.StartDate,
+                ToDate = period.EndDate,
+                PeriodName = period.Name,
+                Records = computed
+            };
+        }
+
+        // The period was already generated and saved: show the approved (live) values, with any
+        // unreviewed edit overlaid and flagged, instead of silently recalculating over them.
+        var pendingByEmployee = (await _payrollPeriodRepository.GetChangeRequestsAsync(
+                savedPeriodId, pendingOnly: true, includeProposed: true, cancellationToken))
+            .Where(c => c.ProposedRecord is not null)
+            .GroupBy(c => c.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.Id).First());
+        var savedByEmployee = saved.Records.ToDictionary(r => r.EmployeeId);
+
+        var merged = new List<PayrollDto>(computed.Count);
+        foreach (var fresh in computed)
+        {
+            if (!savedByEmployee.TryGetValue(fresh.EmployeeId, out var liveRecord))
+            {
+                merged.Add(fresh);
+                continue;
+            }
+
+            var row = liveRecord;
+            if (pendingByEmployee.TryGetValue(fresh.EmployeeId, out var pending))
+            {
+                row = pending.ProposedRecord!;
+                row.HasPendingApproval = true;
+                row.PendingChangeRequestId = pending.Id;
+            }
+
+            // Display-only data that is not persisted with the saved record.
+            row.ShiftName = fresh.ShiftName;
+            row.AbsentDates = fresh.AbsentDates;
+            row.RegularHolidayAbsentCount = fresh.RegularHolidayAbsentCount;
+            row.Email = fresh.Email;
+            merged.Add(row);
+        }
 
         return new PayrollByDateRangeDto
         {
+            PayrollPeriodId = savedPeriodId,
             FromDate = period.StartDate,
             ToDate = period.EndDate,
-            PeriodName = period.Name,
-            Records = records
+            PeriodName = saved.PeriodName,
+            PendingApprovalCount = merged.Count(r => r.HasPendingApproval),
+            Records = merged
         };
     }
+
+    public Task<IReadOnlyList<PayrollChangeRequestDto>> GetChangeRequestsAsync(
+        int payrollPeriodId,
+        bool pendingOnly = false,
+        CancellationToken cancellationToken = default) =>
+        _payrollPeriodRepository.GetChangeRequestsAsync(payrollPeriodId, pendingOnly, false, cancellationToken);
+
+    public Task<PayrollChangeRequestDto> ApproveChangeAsync(
+        int changeRequestId,
+        string reviewer,
+        string? note,
+        CancellationToken cancellationToken = default) =>
+        _payrollPeriodRepository.ApproveChangeAsync(changeRequestId, reviewer, note, cancellationToken);
+
+    public Task<IReadOnlyList<PayrollApprovalSummaryDto>> GetPendingApprovalSummariesAsync(
+        CancellationToken cancellationToken = default) =>
+        _payrollPeriodRepository.GetPendingApprovalSummariesAsync(cancellationToken);
+
+    public async Task<int> ReviewAllPendingAsync(
+        int payrollPeriodId,
+        bool approve,
+        string reviewer,
+        string? note,
+        CancellationToken cancellationToken = default)
+    {
+        var pending = await _payrollPeriodRepository.GetChangeRequestsAsync(
+            payrollPeriodId, pendingOnly: true, includeProposed: false, cancellationToken);
+
+        var reviewed = 0;
+        foreach (var request in pending)
+        {
+            try
+            {
+                if (approve)
+                {
+                    await _payrollPeriodRepository.ApproveChangeAsync(request.Id, reviewer, note, cancellationToken);
+                }
+                else
+                {
+                    await _payrollPeriodRepository.RejectChangeAsync(request.Id, reviewer, note, cancellationToken);
+                }
+
+                reviewed++;
+            }
+            catch (InvalidOperationException)
+            {
+                // Already reviewed by someone else in the meantime; skip it.
+            }
+        }
+
+        return reviewed;
+    }
+
+    public Task<PayrollChangeRequestDto> RejectChangeAsync(
+        int changeRequestId,
+        string reviewer,
+        string? note,
+        CancellationToken cancellationToken = default) =>
+        _payrollPeriodRepository.RejectChangeAsync(changeRequestId, reviewer, note, cancellationToken);
 
     private async Task<IReadOnlyList<PayrollDto>> ComputePayrollForPeriodAsync(
         PayrollPeriodDto period,
@@ -106,13 +217,30 @@ public class PayrollService : IPayrollService
                 payroll.SpecialOtHours = 0m;
                 payroll.HolidayDays = 0m;
                 payroll.RegularHolidayAbsentCount = 0;
-                payroll.GrossPay = payroll.BasicPayAmount;
+                payroll.GrossPay = payroll.BasicPayAmount + payroll.NightDiffOtPay;
             }
 
             results.Add(payroll);
         }
 
+        await ApplyShiftNamesAsync(results, cancellationToken);
         return results;
+    }
+
+    /// <summary>Labels each row with the employee's current shift; unassigned employees show the default Day Shift.</summary>
+    private async Task ApplyShiftNamesAsync(IEnumerable<PayrollDto> records, CancellationToken cancellationToken)
+    {
+        var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
+        var defaultName = shifts.FirstOrDefault(s => s.Id == ShiftConstants.DefaultShiftId)?.Name
+            ?? ShiftConstants.DefaultShiftName;
+        var shiftByEmployee = shifts
+            .SelectMany(s => s.Employees.Select(e => (e.Id, s.Name)))
+            .ToDictionary(x => x.Id, x => x.Name);
+
+        foreach (var record in records)
+        {
+            record.ShiftName = shiftByEmployee.GetValueOrDefault(record.EmployeeId, defaultName);
+        }
     }
 
     public async Task<SavePayrollPeriodResultDto> SavePeriodAsync(
@@ -161,7 +289,8 @@ public class PayrollService : IPayrollService
                 FromDate = fromDate,
                 ToDate = toDate,
                 PeriodName = request.PeriodName.Trim(),
-                Records = request.Records
+                Records = request.Records,
+                RequestedBy = request.RequestedBy
             },
             cancellationToken);
     }
@@ -170,10 +299,18 @@ public class PayrollService : IPayrollService
         CancellationToken cancellationToken = default) =>
         _payrollPeriodRepository.GetAllSavedPeriodsAsync(cancellationToken);
 
-    public Task<PayrollByDateRangeDto?> GetSavedPeriodByIdAsync(
+    public async Task<PayrollByDateRangeDto?> GetSavedPeriodByIdAsync(
         int payrollPeriodId,
-        CancellationToken cancellationToken = default) =>
-        _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var saved = await _payrollPeriodRepository.GetSavedByIdAsync(payrollPeriodId, cancellationToken);
+        if (saved is not null)
+        {
+            await ApplyShiftNamesAsync(saved.Records, cancellationToken);
+        }
+
+        return saved;
+    }
 
     public async Task<byte[]> ExportExcelAsync(
         DateTime fromDate,

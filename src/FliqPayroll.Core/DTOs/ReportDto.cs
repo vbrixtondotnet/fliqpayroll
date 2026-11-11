@@ -15,6 +15,7 @@ public class PayrollSummaryReportDto
     public decimal TotalGrossPay { get; set; }
     public decimal TotalDeductions { get; set; }
     public decimal TotalNetPay { get; set; }
+    public int PendingApprovalCount { get; set; }
 }
 
 public class EmployeePayrollHistoryDto

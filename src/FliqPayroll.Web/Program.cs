@@ -8,8 +8,11 @@ using FliqPayroll.Web.Jobs;
 using FliqPayroll.Web.Services;
 using Hangfire;
 using Hangfire.SqlServer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +30,7 @@ builder.Services.AddFliqPayrollServices(builder.Configuration);
 builder.Services.AddScoped<PayslipPdfService>();
 builder.Services.AddScoped<IPayslipDocumentGenerator>(sp => sp.GetRequiredService<PayslipPdfService>());
 builder.Services.AddScoped<PayslipEmailJobs>();
+builder.Services.AddScoped<PayrollApprovalEmailJobs>();
 
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -65,13 +69,63 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<FliqPayrollDbContext>()
 .AddDefaultTokenProviders();
 
+// Every endpoint requires a signed-in user unless it explicitly opts out with [AllowAnonymous]
+// (only the login page, the error page and the Gmail OAuth callback do).
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/Login";
-    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.Cookie.Name = "FliqPayroll.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+    // 30-day login that survives closing the browser; every visit pushes the expiry out another 30 days.
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
+
+    var identityValidate = options.Events.OnValidatePrincipal;
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        // Keep Identity's security-stamp check, then re-issue the cookie on every request
+        // (the default only renews once half the lifetime has passed).
+        if (identityValidate is not null)
+        {
+            await identityValidate(context);
+        }
+
+        if (context.Principal is not null)
+        {
+            context.ShouldRenew = true;
+        }
+    };
+
+    // API calls get a 401/403 instead of an HTML redirect so scripts can react to it.
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
 });
 
 var app = builder.Build();
@@ -93,13 +147,53 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Users flagged PasswordChange = 1 can do nothing but change their password (or sign out) until they have.
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    var exempt = Path.HasExtension(path.Value)
+        || path.StartsWithSegments("/Account/ChangePassword", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Account/Logout", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Account/Login", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Home/Error", StringComparison.OrdinalIgnoreCase);
+
+    if (!exempt && context.User.Identity?.IsAuthenticated == true)
+    {
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var mustChange = userId is not null && await context.RequestServices
+            .GetRequiredService<FliqPayrollDbContext>()
+            .Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.PasswordChange)
+            .FirstOrDefaultAsync(context.RequestAborted);
+
+        if (mustChange)
+        {
+            if (path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { Success = false, Message = "You must change your password before continuing." });
+            }
+            else
+            {
+                context.Response.Redirect("/Account/ChangePassword");
+            }
+
+            return;
+        }
+    }
+
+    await next();
+});
+
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireAuthorizationFilter()],
     DashboardTitle = "FliqPayroll Jobs"
 });
 
-app.MapStaticAssets();
+// Static assets (css/js/logo) must load on the login page, so they are exempt from the fallback policy.
+app.MapStaticAssets().AllowAnonymous();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Dashboard}/{action=Index}/{id?}")

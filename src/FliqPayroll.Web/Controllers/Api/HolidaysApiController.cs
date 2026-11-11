@@ -7,7 +7,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/holidays")]
-[AllowAnonymous]
 public class HolidaysApiController : ControllerBase
 {
     private readonly IHolidayService _holidayService;

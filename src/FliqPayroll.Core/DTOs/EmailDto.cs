@@ -20,5 +20,7 @@ public class SendEmailRequestDto
     public string To { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
     public string BodyText { get; set; } = string.Empty;
+    /// <summary>Optional HTML alternative; the text body is still sent as the fallback.</summary>
+    public string? BodyHtml { get; set; }
     public IReadOnlyList<EmailAttachmentDto> Attachments { get; set; } = [];
 }

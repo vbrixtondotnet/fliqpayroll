@@ -2,6 +2,7 @@ namespace FliqPayroll.Core.DTOs;
 
 using FliqPayroll.Core.Constants;
 using FliqPayroll.Core.Utilities;
+using System.Text.Json.Serialization;
 
 public class AttendanceDto
 {
@@ -19,6 +20,14 @@ public class AttendanceDto
     public bool IsFromBiometric { get; set; }
     public string? Notes { get; set; }
 
+    /// <summary>Name of the employee's assigned shift (the default Day Shift when none is assigned).</summary>
+    public string ShiftName { get; set; } = ShiftConstants.DefaultShiftName;
+    public TimeSpan ShiftStart { get; set; } = AttendanceConstants.WorkStart;
+    public TimeSpan ShiftEnd { get; set; } = AttendanceConstants.WorkEnd;
+
+    [JsonIgnore]
+    public ShiftSchedule Shift => new(ShiftName, ShiftStart, ShiftEnd);
+
     /// <summary>
     /// Present only when regular Time In and Time Out exist.
     /// </summary>
@@ -29,13 +38,19 @@ public class AttendanceDto
         AttendancePolicyProcessor.CalculateHoursWorked(TimeIn, TimeOut);
 
     public decimal OvertimeHours =>
-        AttendancePolicyProcessor.CalculateOvertimeHours(TimeIn, TimeOut);
+        AttendancePolicyProcessor.CalculateOvertimeHours(TimeIn, TimeOut, Shift);
+
+    public decimal NightDifferentialHours =>
+        AttendancePolicyProcessor.CalculateNightDifferentialHours(TimeIn, TimeOut);
 
     public decimal LateMinutes =>
         AttendancePolicyProcessor.TryGetEffectiveTimeWindow(
             TimeIn, TimeOut, out var effectiveIn, out _)
-            ? AttendanceConstants.CalculateLateMinutes(effectiveIn)
-            : AttendanceConstants.CalculateLateMinutes(TimeIn);
+            ? AttendanceConstants.CalculateLateMinutes(effectiveIn, Shift)
+            : AttendanceConstants.CalculateLateMinutes(TimeIn, Shift);
+
+    /// <summary>Minutes short of the shift end (Time Out before the scheduled end).</summary>
+    public decimal UndertimeMinutes => Shift.CalculateUndertimeMinutes(TimeIn, TimeOut);
 }
 
 public class UpdateAttendanceDto

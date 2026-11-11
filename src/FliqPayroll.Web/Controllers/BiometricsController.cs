@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FliqPayroll.Web.Controllers;
 
-[AllowAnonymous]
 public class BiometricsController : Controller
 {
     public IActionResult Index()

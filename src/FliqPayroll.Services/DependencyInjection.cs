@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IBiometricService, BiometricService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IHolidayService, HolidayService>();
+        services.AddScoped<IShiftService, ShiftService>();
         services.AddScoped<ILeaveService, LeaveService>();
 
         services.AddHttpClient(nameof(GmailOAuthService));

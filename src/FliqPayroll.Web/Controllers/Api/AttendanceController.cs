@@ -8,7 +8,6 @@ namespace FliqPayroll.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/attendance")]
-[AllowAnonymous]
 public class AttendanceApiController : ControllerBase
 {
     private readonly IAttendanceService _attendanceService;

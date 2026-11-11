@@ -16,14 +16,12 @@ public static class DataSeeder
     {
         using var scope = services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<FliqPayrollDbContext>();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<FliqPayrollDbContext>>();
 
         await context.Database.MigrateAsync();
 
         await SeedRolesAsync(roleManager, logger);
-        await SeedUsersAsync(userManager, logger);
 
         if (await context.Employees.AnyAsync())
         {
@@ -175,35 +173,6 @@ public static class DataSeeder
                 await roleManager.CreateAsync(new IdentityRole(role));
                 logger.LogInformation("Created role {Role}.", role);
             }
-        }
-    }
-
-    private static async Task SeedUsersAsync(UserManager<ApplicationUser> userManager, ILogger logger)
-    {
-        const string adminEmail = "admin@fliqpayroll.local";
-        if (await userManager.FindByEmailAsync(adminEmail) is not null)
-        {
-            return;
-        }
-
-        var admin = new ApplicationUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            FullName = "System Administrator",
-            EmailConfirmed = true
-        };
-
-        var result = await userManager.CreateAsync(admin, "Admin@123");
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(admin, RoleConstants.SuperAdmin);
-            logger.LogInformation("Seeded admin user {Email}.", adminEmail);
-        }
-        else
-        {
-            logger.LogWarning("Failed to seed admin user: {Errors}",
-                string.Join(", ", result.Errors.Select(e => e.Description)));
         }
     }
 }

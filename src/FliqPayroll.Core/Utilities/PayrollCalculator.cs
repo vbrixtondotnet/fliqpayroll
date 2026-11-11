@@ -169,8 +169,11 @@ public static class PayrollCalculator
     {
         var payableAttendance = GetPayableAttendance(attendance);
         var regularOtHours = Round(payableAttendance.Sum(a => a.OvertimeHours));
+        var nightDiffHours = Round(payableAttendance.Sum(a => a.NightDifferentialHours));
+        var nightDiffRate = PayrollConstants.NightDifferentialRate;
+        var nightDiffPay = Round(Round(rates.Hourly) * nightDiffRate * nightDiffHours);
         var lateUndertimeMinutes = Round(
-            GetLateUndertimeAttendance(attendance, holidaysByDate).Sum(a => a.LateMinutes));
+            GetLateUndertimeAttendance(attendance, holidaysByDate).Sum(a => a.LateMinutes + a.UndertimeMinutes));
         var lateUndertimeAmount = Round((lateUndertimeMinutes / 60m) * rates.Hourly);
         var leaveDays = metrics.LeaveDays;
         var leaveWithPay = Round(rates.Daily * leaveDays);
@@ -217,6 +220,7 @@ public static class PayrollCalculator
             overtimePay +
             specialHolidayPay +
             regularHolidayPay +
+            nightDiffPay +
             leaveWithPay -
             sssDeduction -
             philHealthDeduction -
@@ -232,6 +236,7 @@ public static class PayrollCalculator
                 overtimePay +
                 specialHolidayPay +
                 regularHolidayPay +
+                nightDiffPay +
                 leaveWithPay -
                 absenceDeduction -
                 sssDeduction -
@@ -275,9 +280,9 @@ public static class PayrollCalculator
             HolidayDays = holidayDays,
             HolidayOtPay = regularHolidayPay,
             RegularHolidayAbsentCount = regularHolidayAbsentCount,
-            NightDiffOtRate = 0m,
-            NightDiffHours = 0m,
-            NightDiffOtPay = 0m,
+            NightDiffOtRate = nightDiffRate,
+            NightDiffHours = nightDiffHours,
+            NightDiffOtPay = nightDiffPay,
             LeaveDays = leaveDays,
             HolidayPay = holidayPay,
             RegularHolidayPay = regularHolidayPay,
@@ -289,7 +294,7 @@ public static class PayrollCalculator
             AdjustmentsEarnings = 0m,
             ToAdd = 0m,
             ToDeduct = 0m,
-            GrossPay = grossPay,
+            GrossPay = Round(grossPay + nightDiffPay),
             AbsenceDeduction = absenceDeduction,
             LateDeduction = lateUndertimeAmount,
             LateUndertimeHours = lateUndertimeMinutes,

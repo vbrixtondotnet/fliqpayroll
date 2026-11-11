@@ -8,6 +8,8 @@ public class PayrollDto
     public string EmployeeName { get; set; } = string.Empty;
     public string EmployeeCode { get; set; } = string.Empty;
     public string? Position { get; set; }
+    /// <summary>Employee's current shift name (display only, not persisted).</summary>
+    public string? ShiftName { get; set; }
     /// <summary>Employee email address; populated when enriching payroll summary for payslip actions.</summary>
     public string? Email { get; set; }
     /// <summary>True when a payslip email has already been sent for this employee and period.</summary>
@@ -69,6 +71,9 @@ public class PayrollDto
     public decimal NetPay { get; set; }
     public string? PaymentMethod { get; set; }
     public PayrollStatus Status { get; set; }
+    /// <summary>True when a manual edit to this row is waiting for Finance Officer approval.</summary>
+    public bool HasPendingApproval { get; set; }
+    public int? PendingChangeRequestId { get; set; }
 }
 
 public class PayrollPeriodDto
@@ -82,6 +87,10 @@ public class PayrollPeriodDto
 
 public class PayrollByDateRangeDto
 {
+    /// <summary>Id of the saved payroll period; null when the period has not been saved yet.</summary>
+    public int? PayrollPeriodId { get; set; }
+    /// <summary>Number of rows with edits awaiting approval.</summary>
+    public int PendingApprovalCount { get; set; }
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
     public string PeriodName { get; set; } = string.Empty;
@@ -94,6 +103,8 @@ public class SavePayrollPeriodRequestDto
     public DateTime ToDate { get; set; }
     public string PeriodName { get; set; } = string.Empty;
     public IReadOnlyList<PayrollDto> Records { get; set; } = [];
+    /// <summary>Name of the user submitting the save; stamped by the API layer, used for the audit trail.</summary>
+    public string? RequestedBy { get; set; }
 }
 
 public class SavePayrollPeriodResultDto
@@ -103,4 +114,10 @@ public class SavePayrollPeriodResultDto
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
     public int RecordCount { get; set; }
+    /// <summary>Rows in this period that currently have edits awaiting approval.</summary>
+    public int PendingApprovalCount { get; set; }
+    /// <summary>Rows whose edits were submitted for approval by this save.</summary>
+    public int SubmittedForApprovalCount { get; set; }
+    /// <summary>True when this save is the first pending change since the period was last fully reviewed, so Finance Officers must be emailed.</summary>
+    public bool NotifyApprovers { get; set; }
 }

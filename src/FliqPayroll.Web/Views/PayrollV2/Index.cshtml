@@ -1,9 +1,12 @@
+@using FliqPayroll.Core.Constants
 @model PayrollV2PageViewModel
 @{
-    ViewData["Title"] = "Payroll v2";
+    ViewData["Title"] = "Payroll";
+    var canApprove = User.IsInRole(RoleConstants.FinanceOfficer);
 }
+<div id="payroll-v2-config" class="d-none" data-can-approve="@(canApprove ? "true" : "false")"></div>
 <div class="page-header mb-4">
-    <h1 class="h3 mb-0">Payroll v2</h1>
+    <h1 class="h3 mb-0">Payroll</h1>
 </div>
 
 <div class="card mb-3">
@@ -20,6 +23,8 @@
             </div>
             <button type="button" id="payroll-v2-generate-btn" class="btn btn-primary">Generate Payroll</button>
             <button type="button" id="payroll-v2-save-btn" class="btn btn-success d-none">Save Payroll Period</button>
+            <button type="button" id="payroll-v2-audit-btn" class="btn btn-outline-secondary d-none">Audit Trail</button>
+            <span id="payroll-v2-autosave-status" class="small d-none" role="status" aria-live="polite"></span>
         </div>
 
         <div class="mt-4 pt-3 border-top">
@@ -44,6 +49,7 @@
 </div>
 
 <div id="payroll-v2-period-info" class="alert alert-light border mb-3 d-none"></div>
+<div id="payroll-v2-pending-banner" class="alert alert-warning payroll-v2-pending-banner d-none" role="alert"></div>
 <div id="payroll-v2-save-success" class="alert alert-success d-none" role="alert"></div>
 <div id="payroll-v2-alert" class="alert alert-danger d-none" role="alert"></div>
 <div id="payroll-v2-loading" class="text-center py-3 mb-3 d-none" aria-live="polite">
@@ -154,6 +160,75 @@
             <div class="modal-body">
                 <p id="payroll-v2-absent-employee" class="fw-semibold mb-3"></p>
                 <ul id="payroll-v2-absent-dates-list" class="list-unstyled mb-0 payroll-v2-absent-dates-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payroll-v2-review-modal" tabindex="-1" aria-labelledby="payroll-v2-review-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payroll-v2-review-modal-label">Pending Payroll Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="payroll-v2-review-alert" class="alert alert-danger d-none" role="alert"></div>
+                <p id="payroll-v2-review-summary" class="fw-semibold mb-1"></p>
+                <p id="payroll-v2-review-meta" class="text-muted small mb-3"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-3">
+                        <thead class="table-light">
+                            <tr><th>Field</th><th class="text-end">Original</th><th class="text-end">Revised</th></tr>
+                        </thead>
+                        <tbody id="payroll-v2-review-changes"></tbody>
+                    </table>
+                </div>
+                <div id="payroll-v2-review-actions">
+                    <label for="payroll-v2-review-note" class="form-label">Note <span class="text-muted">(optional)</span></label>
+                    <textarea id="payroll-v2-review-note" class="form-control" rows="2" maxlength="1000"
+                              placeholder="Reason for approving or rejecting"></textarea>
+                </div>
+                <p id="payroll-v2-review-readonly" class="text-muted small mb-0 d-none">
+                    Only a Finance Officer can approve or reject these changes.
+                </p>
+            </div>
+            <div class="modal-footer" id="payroll-v2-review-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="payroll-v2-reject-btn" class="btn btn-outline-danger">Reject</button>
+                <button type="button" id="payroll-v2-approve-btn" class="btn btn-success">Approve</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payroll-v2-audit-modal" tabindex="-1" aria-labelledby="payroll-v2-audit-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payroll-v2-audit-modal-label">Payroll Audit Trail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Every manual edit made to this payroll after it was generated, who made it, and how it was resolved.</p>
+                <div id="payroll-v2-audit-alert" class="alert alert-danger d-none" role="alert"></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Submitted</th>
+                                <th>Employee</th>
+                                <th>Changes</th>
+                                <th>Submitted by</th>
+                                <th>Status</th>
+                                <th>Reviewed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payroll-v2-audit-body">
+                            <tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

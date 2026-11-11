@@ -37,11 +37,12 @@ public class AttendanceService : IAttendanceService
         return _attendanceRepository.GetByDateRangeAsync(phStart, phEnd, cancellationToken);
     }
 
-    public Task<AttendanceDto?> UpdateAsync(UpdateAttendanceDto dto, CancellationToken cancellationToken = default)
+    public async Task<AttendanceDto?> UpdateAsync(UpdateAttendanceDto dto, CancellationToken cancellationToken = default)
     {
         Guard.AgainstNull(dto, nameof(dto));
-        AttendancePolicyProcessor.NormalizeManualAttendance(dto);
-        return _attendanceRepository.UpdateAsync(dto, cancellationToken);
+        var shift = await _attendanceRepository.GetScheduleForAttendanceAsync(dto.Id, cancellationToken);
+        AttendancePolicyProcessor.NormalizeManualAttendance(dto, shift);
+        return await _attendanceRepository.UpdateAsync(dto, cancellationToken);
     }
 
     public async Task<AttendanceUploadResultDto> UploadCsvAsync(
@@ -58,6 +59,7 @@ public class AttendanceService : IAttendanceService
         var unmatchedRows = 0;
 
         var employeesByCode = await _employeeRepository.GetEmployeeIdsByCodesAsync(cancellationToken);
+        var schedulesByEmployee = await _attendanceRepository.GetEmployeeSchedulesAsync(cancellationToken);
 
         using var reader = new StreamReader(fileStream);
         var lineNumber = 0;
@@ -146,7 +148,8 @@ public class AttendanceService : IAttendanceService
                     employeeCode,
                     date,
                     dayPunches,
-                    nextDayPunches);
+                    nextDayPunches,
+                    schedulesByEmployee.GetValueOrDefault(employeeId));
 
                 if (processed is null)
                 {

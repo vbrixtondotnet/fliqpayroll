@@ -142,7 +142,9 @@ public class ReportService : IReportService
 
             TotalDeductions = records.Sum(r => r.TotalDeductions),
 
-            TotalNetPay = records.Sum(r => r.NetPay)
+            TotalNetPay = records.Sum(r => r.NetPay),
+
+            PendingApprovalCount = records.Count(r => r.HasPendingApproval)
 
         };
 

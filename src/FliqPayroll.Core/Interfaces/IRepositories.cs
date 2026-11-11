@@ -1,4 +1,5 @@
 using FliqPayroll.Core.DTOs;
+using FliqPayroll.Core.Utilities;
 
 
 
@@ -51,6 +52,10 @@ public interface IAttendanceRepository
     Task<IReadOnlyList<AttendanceDto>> GetByEmployeeAndPeriodAsync(int employeeId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
 
     Task UpsertBiometricAsync(ProcessedAttendanceDayDto record, CancellationToken cancellationToken = default);
+    /// <summary>Shift schedule per employee id; employees without a shift get the default Day Shift.</summary>
+    Task<IReadOnlyDictionary<int, ShiftSchedule>> GetEmployeeSchedulesAsync(CancellationToken cancellationToken = default);
+    /// <summary>Schedule of the employee owning the attendance record (default Day Shift when unassigned).</summary>
+    Task<ShiftSchedule> GetScheduleForAttendanceAsync(int attendanceId, CancellationToken cancellationToken = default);
 
     Task<int> SaveUploadLogAsync(string fileName, int totalRows, int processedDays, int skippedIncomplete, int unmatchedRows, CancellationToken cancellationToken = default);
 
@@ -76,6 +81,17 @@ public interface IHolidayRepository
     Task<bool> ExistsOnDateAsync(DateTime date, int? excludeHolidayId = null, CancellationToken cancellationToken = default);
 }
 
+public interface IShiftRepository
+{
+    Task<IReadOnlyList<ShiftDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ShiftDto?> GetByIdAsync(int shiftId, CancellationToken cancellationToken = default);
+    Task<ShiftDto?> UpdateAsync(int shiftId, string name, TimeSpan startTime, TimeSpan endTime, CancellationToken cancellationToken = default);
+    Task<bool> NameExistsAsync(string name, int excludeShiftId, CancellationToken cancellationToken = default);
+    /// <summary>Makes <paramref name="employeeIds"/> the complete roster of the shift; returns null if the shift does not exist.</summary>
+    Task<ShiftDto?> SetEmployeesAsync(int shiftId, IReadOnlyCollection<int> employeeIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ShiftEmployeeDto>> GetAssignableEmployeesAsync(CancellationToken cancellationToken = default);
+}
+
 public interface ILeaveRepository
 {
     Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
@@ -93,6 +109,17 @@ public interface IPayrollPeriodRepository
     Task<IReadOnlyList<SavePayrollPeriodResultDto>> GetAllSavedPeriodsAsync(CancellationToken cancellationToken = default);
     /// <summary>Marks the payroll record as having had its payslip emailed. Returns false if the record was not found.</summary>
     Task<bool> MarkPayslipEmailSentAsync(int employeeId, int payrollPeriodId, CancellationToken cancellationToken = default);
+
+    /// <summary>Change requests (the audit trail) for a period, newest first.</summary>
+    Task<IReadOnlyList<PayrollChangeRequestDto>> GetChangeRequestsAsync(int payrollPeriodId, bool pendingOnly = false, bool includeProposed = false, CancellationToken cancellationToken = default);
+    /// <summary>Periods that currently have unreviewed edits, most recently edited first.</summary>
+    Task<IReadOnlyList<PayrollApprovalSummaryDto>> GetPendingApprovalSummariesAsync(CancellationToken cancellationToken = default);
+    /// <summary>Clears the "approvers already emailed" flag so the next pending change triggers a fresh email.</summary>
+    Task ResetApprovalNotificationAsync(int payrollPeriodId, CancellationToken cancellationToken = default);
+    /// <summary>Applies a pending change request to the live payroll record. Throws if it is not pending.</summary>
+    Task<PayrollChangeRequestDto> ApproveChangeAsync(int changeRequestId, string reviewer, string? note, CancellationToken cancellationToken = default);
+    /// <summary>Rejects a pending change request, leaving the live payroll record untouched.</summary>
+    Task<PayrollChangeRequestDto> RejectChangeAsync(int changeRequestId, string reviewer, string? note, CancellationToken cancellationToken = default);
 }
 
 

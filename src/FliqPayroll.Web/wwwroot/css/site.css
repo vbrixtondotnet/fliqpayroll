@@ -542,6 +542,28 @@ body {
   background: #f3f5f9 !important;
 }
 
+.shift-ribbon {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.shift-ribbon-night {
+  background-color: #000;
+  color: #fff;
+}
+
+.shift-ribbon-day {
+  background-color: #0d6efd;
+  color: #000;
+}
+
 .payroll-v2-table tbody tr:nth-child(even) .payroll-v2-sticky-col {
   background: #eceff5 !important;
 }
@@ -657,4 +679,183 @@ body {
   padding: 0.5rem 1rem;
   color: #6c757d;
   font-size: 0.875rem;
+}
+
+/* ---- Payroll approval: rows with edits waiting for administrator approval ---- */
+.payroll-v2-table tbody tr.payroll-v2-row-pending td,
+.payroll-v2-table tbody tr.payroll-v2-row-pending:nth-child(even) td,
+.payroll-v2-table tbody tr.payroll-v2-row-pending:hover td {
+  background: #ffe8cc;
+}
+
+.payroll-v2-table tbody tr.payroll-v2-row-pending .payroll-v2-sticky-col,
+.payroll-v2-table tbody tr.payroll-v2-row-pending:nth-child(even) .payroll-v2-sticky-col {
+  background: #ffd9a8 !important;
+}
+
+.payroll-v2-table tbody tr.payroll-v2-row-pending .payroll-v2-input {
+  background-color: #fff8ee;
+}
+
+.payroll-v2-pending-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.2rem;
+  background: #fd7e14;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.payroll-v2-review-btn {
+  font-size: 0.7rem;
+  vertical-align: baseline;
+}
+
+.payslip-row-pending > * {
+  --bs-table-bg: #ffe8cc;
+  --bs-table-hover-bg: #ffdcb3;
+}
+
+.payslip-pending-label {
+  color: #a04a00;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.audit-change-list {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.8rem;
+}
+
+/* ---- Notification bell (header) ---- */
+.app-navbar .notification-bell-btn {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  line-height: 1;
+  border: 0;
+}
+
+.app-navbar .notification-bell-btn:hover,
+.app-navbar .notification-bell-btn:focus {
+  color: #fff;
+}
+
+.app-navbar .notification-bell-btn::after {
+  display: none;
+}
+
+.app-navbar .notification-bell-btn .badge {
+  font-size: 0.65rem;
+  min-width: 1.25rem;
+}
+
+.notification-menu {
+  width: 360px;
+  max-width: 92vw;
+  overflow: hidden;
+}
+
+.notification-header {
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  background: #f8f9fa;
+}
+
+.notification-list {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: block;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--bs-border-color, #eceff3);
+  text-decoration: none;
+  color: inherit;
+  white-space: normal;
+}
+
+.notification-item:hover {
+  background: #fff4e5;
+  color: inherit;
+}
+
+.notification-empty {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.notification-footer {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+/* ---- Account avatar menu (header) ---- */
+.user-avatar-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.user-avatar-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #00a3ff;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.user-avatar-btn:hover .user-avatar,
+.user-avatar-btn[aria-expanded="true"] .user-avatar {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+.user-menu {
+  min-width: 230px;
+}
+
+.user-menu form {
+  margin: 0;
+}
+
+.user-menu .dropdown-item {
+  cursor: pointer;
+}
+
+/* ---- Change-password screen: white logo on the dark page background, above the card ---- */
+.login-stack {
+  width: 100%;
+  max-width: 420px;
+  padding: 1rem;
+}
+
+.login-logo-light {
+  display: block;
+  height: 48px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto 1.5rem;
 }

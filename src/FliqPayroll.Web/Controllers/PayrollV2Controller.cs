@@ -4,12 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FliqPayroll.Web.Controllers;
 
-[AllowAnonymous]
 public class PayrollV2Controller : Controller
 {
     public IActionResult Index()
     {
-        ViewData["Title"] = "Payroll v2";
+        ViewData["Title"] = "Payroll";
 
         return View(new PayrollV2PageViewModel());
     }
