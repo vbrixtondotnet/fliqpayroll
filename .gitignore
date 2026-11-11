@@ -44,3 +44,6 @@ artifacts/
 **/gmail-oauth.tokens
 **/DataProtection-Keys/
 /src/FliqPayroll.Core/obj/Release/net10.0/FliqPayroll.Core.csproj.CoreCompileInputs.cache
+
+# Local helper scripts (user-creation SQL with password hashes and staff emails): never commit
+scripts/
