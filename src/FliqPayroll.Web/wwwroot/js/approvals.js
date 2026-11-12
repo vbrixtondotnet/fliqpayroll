@@ -40,13 +40,11 @@
     }
 
     function showError(message) {
-        $("#approvals-success").addClass("d-none");
-        $("#approvals-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#approvals-alert").addClass("d-none");
-        $("#approvals-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function errorMessage(xhr, fallback) {

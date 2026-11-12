@@ -12,13 +12,11 @@
     let employeeFilterOptions = [];
 
     function showError(message) {
-        $("#attendance-success").addClass("d-none");
-        $("#attendance-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#attendance-alert").addClass("d-none");
-        $("#attendance-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function formatTime(value) {
@@ -327,7 +325,6 @@
     }
 
     function hideError() {
-        $("#attendance-alert").addClass("d-none").text("");
     }
 
     function saveRow($row) {

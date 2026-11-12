@@ -17,13 +17,11 @@
     }
 
     function showError(message) {
-        $("#employees-success").addClass("d-none");
-        $("#employees-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#employees-alert").addClass("d-none");
-        $("#employees-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function formatDateInput(dateValue) {
@@ -231,6 +229,32 @@
             .fail(function () { showError("Failed to load employee."); });
     }
 
+    // Turns a failed response into the most useful message: our own API message, a validation error, or the fallback.
+    function describeFailure(xhr, fallback) {
+        var body = xhr && xhr.responseJSON;
+
+        if (body && body.Message) {
+            return body.Message;
+        }
+
+        if (body && body.errors) {
+            var fields = Object.keys(body.errors)
+                .map(function (key) { return key.replace(/^\$\./, ""); })
+                .filter(function (key) { return key && key !== "dto"; })
+                .map(function (key) { return key.replace(/([a-z])([A-Z])/g, "$1 $2"); });
+
+            if (fields.length) {
+                return "Please check these fields: " + fields.join(", ") + ".";
+            }
+        }
+
+        if (xhr && xhr.status === 403) {
+            return "You do not have permission to save employees.";
+        }
+
+        return fallback;
+    }
+
     function saveEmployee() {
         const id = $("#employee-id").val();
         const payload = buildPayload();
@@ -252,7 +276,7 @@
                 loadEmployees();
                 loadDepartments();
             })
-            .fail(function () { showError("Failed to save employee."); });
+            .fail(function (xhr) { showError(describeFailure(xhr, "Failed to save employee. Please try again.")); });
     }
 
     function deleteEmployee(id) {

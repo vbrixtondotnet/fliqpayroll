@@ -19,16 +19,11 @@
     }
 
     function showError(message) {
-        $("#shift-success").addClass("d-none");
-        $("#shift-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#shift-alert").addClass("d-none");
-        $("#shift-success").removeClass("d-none").text(message);
-        window.setTimeout(function () {
-            $("#shift-success").addClass("d-none");
-        }, 3000);
+        window.FliqToast.success(message);
     }
 
     function formatTime(hhmm) {
@@ -135,7 +130,6 @@
     function openEdit(id) {
         const shift = findShift(id);
         if (!shift) { return; }
-        $("#shift-edit-error").addClass("d-none");
         $("#shift-edit-id").val(shift.Id);
         $("#shift-edit-name").val(shift.Name);
         $("#shift-edit-start").val(shift.StartTime);
@@ -152,14 +146,14 @@
         };
 
         if (!payload.Name || !payload.StartTime || !payload.EndTime) {
-            $("#shift-edit-error").removeClass("d-none").text("Name, start time and end time are required.");
+            window.FliqToast.error("Name, start time and end time are required.");
             return;
         }
 
         putJson(api.update(id), payload)
             .done(function (res) {
                 if (!res.Success) {
-                    $("#shift-edit-error").removeClass("d-none").text(res.Message || "Unable to save shift.");
+                    window.FliqToast.error(res.Message || "Unable to save shift.");
                     return;
                 }
                 editModal.hide();
@@ -167,7 +161,7 @@
                 load().done(function () { showSuccess("Shift updated."); });
             })
             .fail(function (xhr) {
-                $("#shift-edit-error").removeClass("d-none").text(failMessage(xhr, "Unable to save shift."));
+                window.FliqToast.error(failMessage(xhr, "Unable to save shift."));
             });
     }
 
@@ -208,7 +202,6 @@
     function openAssign(id) {
         const shift = findShift(id);
         if (!shift) { return; }
-        $("#shift-assign-error").addClass("d-none");
         $("#shift-assign-id").val(id);
         $("#shift-assign-title").text("Assign Employees – " + shift.Name);
         $("#shift-assign-search").val("");
@@ -222,7 +215,7 @@
         putJson(api.setEmployees(id), { EmployeeIds: Array.from(selectedIds) })
             .done(function (res) {
                 if (!res.Success) {
-                    $("#shift-assign-error").removeClass("d-none").text(res.Message || "Unable to save assignments.");
+                    window.FliqToast.error(res.Message || "Unable to save assignments.");
                     return;
                 }
                 assignModal.hide();
@@ -230,7 +223,7 @@
                 load().done(function () { showSuccess("Shift assignments saved."); });
             })
             .fail(function (xhr) {
-                $("#shift-assign-error").removeClass("d-none").text(failMessage(xhr, "Unable to save assignments."));
+                window.FliqToast.error(failMessage(xhr, "Unable to save assignments."));
             });
     }
 

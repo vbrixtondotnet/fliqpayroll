@@ -6,6 +6,8 @@ using FliqPayroll.Core.Utilities;
 
 using FliqPayroll.Data.Entities;
 
+using System.Text.RegularExpressions;
+
 using Microsoft.EntityFrameworkCore;
 
 
@@ -207,11 +209,13 @@ public class EmployeeRepository : IEmployeeRepository
 
 
 
+        await EnsureValidAsync(dto, excludeId: null, cancellationToken);
+
         var entity = MapToEntity(new Employee(), dto);
 
         _context.Employees.Add(entity);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await SaveEmployeeChangesAsync(entity.EmployeeCode, cancellationToken);
 
 
 
@@ -241,19 +245,84 @@ public class EmployeeRepository : IEmployeeRepository
 
 
 
+        await EnsureValidAsync(dto, excludeId: entity.Id, cancellationToken);
+
         MapToEntity(entity, dto);
 
         entity.UpdatedAt = DateTime.UtcNow;
 
-
-
-        await _context.SaveChangesAsync(cancellationToken);
+        await SaveEmployeeChangesAsync(entity.EmployeeCode, cancellationToken);
 
         return MapToDto(entity);
 
     }
 
 
+
+    /// <summary>
+    /// Checks everything that would otherwise surface as an opaque database error, and reports it in plain words:
+    /// required values, column lengths (read from the EF model so they never drift) and duplicate employee codes.
+    /// </summary>
+    private async Task EnsureValidAsync(CreateEmployeeDto dto, int? excludeId, CancellationToken cancellationToken)
+    {
+        var code = dto.EmployeeCode?.Trim() ?? string.Empty;
+
+        if (code.Length == 0)
+        {
+            throw new ArgumentException("Employee code is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.LastName))
+        {
+            throw new ArgumentException("Last name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.FirstName))
+        {
+            throw new ArgumentException("First name is required.");
+        }
+
+        var entityType = _context.Model.FindEntityType(typeof(Employee));
+        foreach (var property in typeof(CreateEmployeeDto).GetProperties().Where(p => p.PropertyType == typeof(string)))
+        {
+            var maxLength = entityType?.FindProperty(property.Name)?.GetMaxLength();
+            var value = (property.GetValue(dto) as string)?.Trim();
+
+            if (maxLength is int limit && value is not null && value.Length > limit)
+            {
+                throw new ArgumentException(
+                    $"{Humanize(property.Name)} is too long ({value.Length} characters). The maximum is {limit}.");
+            }
+        }
+
+        var owner = await _context.Employees
+            .AsNoTracking()
+            .Where(e => e.EmployeeCode == code && (excludeId == null || e.Id != excludeId))
+            .Select(e => new { e.LastName, e.FirstName })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (owner is not null)
+        {
+            throw new ArgumentException(
+                $"Employee code '{code}' is already used by {owner.LastName}, {owner.FirstName}. Enter a different code.");
+        }
+    }
+
+    /// <summary>Saves pending employee changes; a duplicate-code race that slips past the check is reported clearly too.</summary>
+    private async Task SaveEmployeeChangesAsync(string employeeCode, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+        {
+            throw new ArgumentException($"Employee code '{employeeCode}' is already in use. Enter a different code.");
+        }
+    }
+
+    private static string Humanize(string propertyName) =>
+        Regex.Replace(propertyName, "(?<!^)([A-Z])", " $1");
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
 

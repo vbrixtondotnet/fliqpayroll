@@ -859,3 +859,29 @@ body {
   max-width: 100%;
   margin: 0 auto 1.5rem;
 }
+
+/* ---- Toast notifications ---- */
+.fliq-toast-container {
+  top: 4.5rem; /* below the header */
+  z-index: 2000; /* above modals (1055) and dropdowns */
+  width: 380px;
+  max-width: 100vw;
+}
+
+.fliq-toast {
+  color: #fff;
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.25);
+}
+
+.fliq-toast-error {
+  background-color: #dc3545;
+}
+
+.fliq-toast-success {
+  background-color: #198754;
+}
+
+.fliq-toast .toast-body {
+  font-size: 0.9rem;
+  white-space: pre-line;
+}

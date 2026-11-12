@@ -17,17 +17,15 @@
     let employeeOptions = [];
 
     function showError(message) {
-        $("#leaves-success").addClass("d-none");
-        $("#leaves-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#leaves-alert").addClass("d-none");
-        $("#leaves-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function hideAlerts() {
-        $("#leaves-alert, #leaves-success").addClass("d-none").text("");
+        // Toasts dismiss themselves; nothing to clear.
     }
 
     function formatEmployeeLabel(employee) {

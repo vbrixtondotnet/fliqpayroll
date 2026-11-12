@@ -520,6 +520,10 @@
 
     function setAutoSaveStatus(kind, text) {
         var classes = { saving: "text-muted", saved: "text-success", error: "text-danger", dirty: "text-warning" };
+
+        if (kind === "error") {
+            window.FliqToast.error(text);
+        }
         $("#payroll-v2-autosave-status")
             .removeClass("d-none text-muted text-success text-danger text-warning")
             .addClass(classes[kind] || "text-muted")
@@ -788,19 +792,18 @@
     }
 
     function showError(message) {
-        $("#payroll-v2-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function hideError() {
-        $("#payroll-v2-alert").addClass("d-none").text("");
     }
 
     function hideSaveSuccess() {
-        $("#payroll-v2-save-success").addClass("d-none").text("");
+        // Toasts dismiss themselves; nothing to clear.
     }
 
     function showSaveSuccess(message) {
-        $("#payroll-v2-save-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function setSaveButtonVisible(isVisible) {
@@ -1390,7 +1393,6 @@
             return;
         }
 
-        $("#payroll-v2-review-alert").addClass("d-none").text("");
         $("#payroll-v2-review-note").val("");
         reviewingChange = null;
 
@@ -1457,7 +1459,7 @@
                     message = "Only a signed-in Finance Officer can approve or reject payroll changes.";
                 }
 
-                $("#payroll-v2-review-alert").removeClass("d-none").text(message);
+                window.FliqToast.error(message);
             })
             .always(function () {
                 $buttons.prop("disabled", false);
@@ -1482,7 +1484,6 @@
 
         var $body = $("#payroll-v2-audit-body").html(
             '<tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>');
-        $("#payroll-v2-audit-alert").addClass("d-none").text("");
         bootstrap.Modal.getOrCreateInstance(document.getElementById("payroll-v2-audit-modal")).show();
 
         $.getJSON(api.auditTrail(currentPeriodId))
@@ -1520,7 +1521,7 @@
             })
             .fail(function () {
                 $body.empty();
-                $("#payroll-v2-audit-alert").removeClass("d-none").text("Failed to load the audit trail.");
+                window.FliqToast.error("Failed to load the audit trail.");
             });
     }
 

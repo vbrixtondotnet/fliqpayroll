@@ -7,13 +7,11 @@
     };
 
     function showError(message) {
-        $("#biometrics-success").addClass("d-none");
-        $("#biometrics-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#biometrics-alert").addClass("d-none");
-        $("#biometrics-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function formatDateInput(date) {

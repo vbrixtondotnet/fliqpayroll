@@ -17,7 +17,7 @@
     }
 
     function showError(message) {
-        $("#payroll-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function salaryTypeBadge(salaryType) {
@@ -127,7 +127,6 @@
         }
 
         setLoading(true);
-        $("#payroll-alert").addClass("d-none");
 
         loadRequest = $.getJSON(api.getByDateRange, range)
             .done(function (response) {

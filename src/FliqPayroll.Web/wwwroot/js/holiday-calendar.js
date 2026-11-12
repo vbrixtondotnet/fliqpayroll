@@ -22,16 +22,11 @@
     let detailModal;
 
     function showError(message) {
-        $("#holiday-success").addClass("d-none");
-        $("#holiday-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#holiday-alert").addClass("d-none");
-        $("#holiday-success").removeClass("d-none").text(message);
-        window.setTimeout(function () {
-            $("#holiday-success").addClass("d-none");
-        }, 3000);
+        window.FliqToast.success(message);
     }
 
     function holidayTypeLabel(type) {

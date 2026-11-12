@@ -56,7 +56,8 @@
                 });
             })
             .fail(function () {
-                $body.html('<tr><td colspan="6" class="text-center text-danger py-3">Failed to load pending approvals.</td></tr>');
+                window.FliqToast.error("Failed to load pending approvals.");
+                $body.html('<tr><td colspan="6" class="text-center text-muted py-3">Unable to load.</td></tr>');
             });
     }
 
@@ -68,7 +69,7 @@
     }
 
     function showError(message) {
-        $("#dashboard-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function loadSummary() {

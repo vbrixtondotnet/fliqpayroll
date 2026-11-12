@@ -33,18 +33,14 @@
     }
 
     function showError(message) {
-        $("#payslips-success").addClass("d-none").text("");
-        $("#payslips-alert").removeClass("d-none").text(message);
+        window.FliqToast.error(message);
     }
 
     function showSuccess(message) {
-        $("#payslips-alert").addClass("d-none").text("");
-        $("#payslips-success").removeClass("d-none").text(message);
+        window.FliqToast.success(message);
     }
 
     function hideAlerts() {
-        $("#payslips-alert").addClass("d-none").text("");
-        $("#payslips-success").addClass("d-none").text("");
         $("#payslips-pending-warning").addClass("d-none");
     }
 
